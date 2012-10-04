@@ -1,0 +1,25 @@
+GN93hz:
+  filename: data/GN93hz
+  header:
+    begin: 0
+    end: 60
+  summary:
+    begin: 60
+    end: 240
+    head: 2
+    foot: 52
+  tables:
+    begin: 240
+    end: 0
+    head: 0
+    num: 126
+  table:
+    begin: 0
+    end: 77
+    head: 6
+    foot: 1
+    cols: 20
+    chars: 7
+    header: 5
+    
+  
