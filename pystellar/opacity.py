@@ -119,3 +119,17 @@ def read_table_opal(fkey):
         nrows = c[fkey]["table.end"] - c[fkey]["table.begin"] - c[fkey]["table.head"] - c[fkey]["table.foot"]
         assert tables.shape == (c[fkey]["tables.num"],nrows,c[fkey]["table.cols"]-1), "Reading Table Shape Problem: %s" % repr(tables.shape)
         return tables, summary, rows, heads
+
+
+def get_interpolator(tnum, tables, summary, rows, heads):
+    """docstring for get_interpolator"""
+    from scipy.interpolate import griddata
+    
+    logRs, logTs = np.meshgrid(rows[tnum],heads[tnum])
+    rossk = tables[tnum]
+    
+    points = np.vstack((logRs.flat,logTs.flat)).T
+    values = np.asarray(rossk.flat)
+    return lambda p : griddata(points,values,p,method='nearest')
+    
+    
