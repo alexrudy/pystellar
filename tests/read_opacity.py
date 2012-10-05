@@ -10,6 +10,6 @@
 from pystellar.opacity import read_table_opal, get_interpolator
 
 if __name__ == '__main__':
-    interp = get_interpolator(1,*read_table_opal("GN93hz"))
-    print interp((2,0.5))
+    interp = get_interpolator(*read_table_opal("GN93hz"))
+    print interp((2,5,1.0,0.0,0.0,0.0,0.0))
     
