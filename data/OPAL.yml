@@ -7,7 +7,15 @@ GN93hz:
     begin: 60
     end: 240
     head: 2
-    foot: 0
+    foot: 51
+    cols:
+      - 11
+      - 20
+      - 9
+      - 9
+      - 9
+      - 10
+      - 10
   tables:
     begin: 240
     end: 0
