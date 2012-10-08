@@ -39,9 +39,9 @@ X = 0.700
 Y = 0.280
 opacity = OpacityTable("GN93hz",load=True)
 opacity.composition(X=X,Y=Y)
-print u"Fixed composition at X=%.3g,Y=%.3g" % (X,Y)
-opacity.setup()
+print u"Fixed composition at X=%.3g,Y=%.3g,Z=%.3g" % (opacity.X,opacity.Y,opacity.Z)
+print u"Using table %d" % opacity.n
 
 for logT,logrho in zip(logTs,logrhos):
-    kappa = opacity.lookup_single(logrho=logrho,logT=logT)
+    kappa = opacity.lookup(logrho=logrho,logT=logT)
     print u"log(T)=%5.3f, log(ρ)=%6.3f\n → κ=%5.3f" % (logT,logrho,kappa)
