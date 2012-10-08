@@ -17,7 +17,7 @@ setup(
     version = version,
     packages = find_packages(exclude=['tests']),
     package_data = {'pystellar':['OPAL.yml']},
-    install_requires = ['distribute','PyYAML>=3.10'],
+    install_requires = ['distribute','PyYAML>=3.10','astropysics'],
     test_suite = 'tests',
     author = 'Alexander Rudy',
     author_email = 'dev@alexrudy.org',
