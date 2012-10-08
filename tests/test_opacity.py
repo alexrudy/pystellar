@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # 
-#  opacity.py
+#  test_opacity.py
 #  pystellar
 #  
 #  Created by Alexander Rudy on 2012-10-04.
@@ -11,6 +11,8 @@
 from pystellar.opacity import OpacityTable
 
 if __name__ == '__main__':
-    opacity = OpacityTable("GN93hz")
-    print opacity.lookup_single(logrho=0.3,logT=6.3,X=0.1,Y=0.9,Z=0.0)
+    opacity = OpacityTable("GN93hz",load=True)
+    opacity.composition(X=0.990,Y=0.000)
+    opacity.setup()
+    print opacity.lookup_single(logrho=0.3,logT=6.3,X=0.990,Y=0.0,Z=0.01)
     
