@@ -7,3 +7,6 @@
 # 
 
 from __future__ import division
+
+version = "0.1"
+__version__ = version
