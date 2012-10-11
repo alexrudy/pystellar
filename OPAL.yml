@@ -29,5 +29,35 @@ GN93hz:
     cols: 20
     chars: 7
     header: 5
-    
+OP17:
+  filename: data/OP17.arrudy@ucsc.edu11102012021826.tab
+  header:
+    begin: 0
+    end: 60
+  summary:
+    begin: 60
+    end: 240
+    head: 2
+    foot: 51
+    cols:
+      - 11
+      - 20
+      - 9
+      - 9
+      - 9
+      - 10
+      - 10
+  tables:
+    begin: 240
+    end: 0
+    head: 0
+    num: 126
+  table:
+    begin: 0
+    end: 77
+    head: 6
+    foot: 1
+    cols: 20
+    chars: 7
+    header: 4
   

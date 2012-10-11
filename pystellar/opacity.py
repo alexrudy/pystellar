@@ -86,7 +86,7 @@ def read_table_opal(fkey,cfg):
             StringIO(table_list[c.get("table.header")]),
             filling_values=0.0,
             )[1:]
-            
+        
         if -c.get("table.foot",0) == 0:
             table_data = table_list[c.get("table.head",0):]
         else:
@@ -305,7 +305,7 @@ class OpacityTable(object):
                 elif ele < np.min(self._tbls[self.n,:,ind]):
                     raise ValueError("BOUNDS: p[%g]=%g < %g" % (ind,ele,np.min(self._tbls[self.n,:,ind])))
                     
-        raise RuntimeError("BOUNDS: Error Index Unknown!!!")
+        raise RuntimeError("BOUNDS: Error Index Unknown!!!, %r" % points)
         
     def lookup(self,points=None,logrho=None,logT=None):
         """A lookup function for our interpolator."""
