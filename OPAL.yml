@@ -24,8 +24,8 @@ GN93hz:
   table:
     begin: 0
     end: 77
-    head: 6
-    foot: 1
+    head: 7
+    foot: 0
     cols: 20
     chars: 7
     header: 5
