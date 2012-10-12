@@ -16,6 +16,8 @@ import scipy as sp
 from pkg_resources import resource_filename
 from warnings import warn
 
+from multiprocessing import Queue, Process
+
 import logging
 # Alex's modules
 from AstroObject.config import DottedConfiguration
@@ -164,10 +166,20 @@ class OpacityTable(object):
     """
     def __init__(self, fkey,load=True, filename="OPAL.yml", X=None, Y=None):
         super(OpacityTable, self).__init__()
+        
+        # Initialize our attribute values
+        self._X = None
+        self._Y = None
+        self._dXc = None
+        self._dXo = None
+        
+        # Set up the configuration
         self.fkey = fkey
         self.cfg = DottedConfiguration({})
         self.cfg.load(filename,silent=False)
         self.cfg.dn = DottedConfiguration
+        
+        # Load the tables (from cached .npy files if appropriate)
         log.info("Loading Tables...")
         if load:
             try:
@@ -178,8 +190,12 @@ class OpacityTable(object):
         else:
             self.read()
         log.info("Tables Loaded: %s",repr(self._tbls.shape))
+        
+        # Make ourselves a nearest-neighbor composition interpolator
         self._composition_interpolator()
         log.info("Opacity Interpolator Initialzied")
+        
+        # If we 
         if X is not None and Y is not None:
             self.composition(X,Y)
         
@@ -260,7 +276,10 @@ class OpacityTable(object):
         
     def composition(self,X,Y,dXc=0.0,dXo=0.0):
         """Set the composition for this sytem. Composition must b"""
-        assert X + Y + dXc + dXo <= 1.0, u"Composition must be equal to 1.0! ∑X=%0.1f" % (X + Y + dXc + dXo)
+        assert X + Y + dXc + dXo <= 1.0, u"Composition must be less than or equal to 1.0! ∑X=%0.1f" % (X + Y + dXc + dXo)
+        if X == self.X and Y == self.Y and dXc == self.dXc and dXo == self.dXo:
+            log.debug("Values are unchanged")
+            return
         point = np.atleast_2d(np.array([X,Y,dXc,dXo]))
         self._n = self._table_number(point)[0]
         self._X = self._comp[self.n,0]
@@ -323,4 +342,80 @@ class OpacityTable(object):
         if np.isnan(kappa).any():
             raise ValueError("BOUNDS: Interpolator returned NaN")
         return kappa
+
+def opacity_thread(inqueue,output):
+    """starts an opactiy thread which takes a queue of items."""
+    O = OpacityTable(fkey='GN93hz')
+    
+    state = 'RUN'
+    
+    while state != 'STOP':
+        value = inqueue.get()
+        if isinstance(value,basestring):
+            state = value
+            if state not in ['STOP','STAT']:
+                value = inqueue.get()
+        if state == 'RUN':
+            logrho, logT = value
+            logk = O.lookup(logrho=logrho,logT=logT)
+            output.put((logrho, logT, logk))
+        if state == 'LOAD':
+            O = OpacityTable(fkey=value)
+        if state == 'COMP':
+            X,Y = value
+            O.composition(X=X,Y=Y)
+        if state == 'STAT':
+            output.put((O.n,O.X,O.Y,O.Z))
+            state = 'RUN'
+
         
+class OpacityThread(object):
+    """A thread management object for opacity threads"""
+    def __init__(self, fkey):
+        super(OpacityThread, self).__init__()
+        self.fkey = fkey # File name key to use when talking to the threaded object.
+        self.input = Queue()
+        self.output = Queue()
+        self._start_thread()
+        
+    def _start_thread(self):
+        """Start the opacity thread"""
+        self._p = Process(target=opacity_thread,args=(self.input,self.output))
+        self._p.start()
+        
+    def _end_thread(self):
+        """End the opacity thread"""
+        self._p.join()
+        
+    def composition(self,X,Y):
+        """Set the composition"""
+        self.input.put('COMP')
+        self.input.put([X,Y])
+        
+    def status(self):
+        """Get the threaded opacity table's status"""
+        self.input.put('STAT')
+        n,X,Y,Z = self.output.get()
+        self._n = n
+        self._X = X
+        self._Y = Y
+        return (n,X,Y,Z)
+        
+    def load(self,fkey):
+        """Load a filekey"""
+        self.input.put('LOAD')
+        self.input.put(fkey)
+        
+    def lookup(self,logrho,logT):
+        """Start lookup of values"""
+        self.input.put([logrho,logT])
+        
+    def retrieve(self):
+        """Return lookup values"""
+        logrho, logT, logk = self.output.get()
+        return logrho, logT, logk
+        
+    def stop(self):
+        """Send the thread stop signal."""
+        self.input.put('STOP')
+        self._end_thread()
