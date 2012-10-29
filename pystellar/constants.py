@@ -10,7 +10,7 @@
 
 
 # cgs units!!
-from astropysics.constants import c, mp, kb
+from astropysics.constants import c, mp, kb, G
 
 sigmab = 5.6704e-5 # stephan-boltzmann constant from http://en.wikipedia.org/wiki/Stefan–Boltzmann_constant
 a = (4.0 * sigmab)/c # radiation constant
