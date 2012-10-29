@@ -6,6 +6,35 @@
 #  Created by Alexander Rudy on 2012-10-07.
 #  Copyright 2012 Alexander Rudy. All rights reserved.
 # 
+"""
+:mod:`density` - Density Calculation
+====================================
+
+Density & Beta
+**************
+
+.. autofunction::
+    density
+    
+.. autofunction::
+    beta
+
+Logarithmic Functions
+*********************
+
+.. autofunction::
+    ldensity
+    
+.. autofunction::
+    lbeta
+
+Support Functions
+*****************
+
+.. autofunction::
+    mmw
+
+"""
 from __future__ import division
 import numpy as np
 import scipy as sp

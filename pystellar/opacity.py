@@ -5,7 +5,24 @@
 #  
 #  Created by Alexander Rudy on 2012-10-03.
 #  Copyright 2012 Alexander Rudy. All rights reserved.
-# 
+#
+"""
+:mod:`opacity` - Rosseland Mean Opacity Interpolation
+=====================================================
+
+.. autoclass::
+    OpacityTable
+    :members:
+    
+Helper Functions
+****************
+
+.. autofunction::
+    read_table_opal
+
+
+"""
+
 from __future__ import division
 
 from StringIO import StringIO
