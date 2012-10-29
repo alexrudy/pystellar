@@ -4,3 +4,4 @@
 *.npy
 ._*
 homeworks/*.txt
+docs/_build/*
