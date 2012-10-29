@@ -20,7 +20,7 @@ import time
 
 print "--Launching Thread"
 start = time.clock()
-OT = ObjectsThread(OpacityTable,nprocs=4,fkey='GN93hz',X=0.70,Y=0.28)
+OT = ObjectsThread(OpacityTable,nprocs=4,kwargs=dict(fkey='OP17',X=0.70,Y=0.28))
 OT.start()
 finish = time.clock()
 print "--Threads Launched: %g" % (finish-start)

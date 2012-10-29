@@ -25,23 +25,36 @@ from AstroObject.config import DottedConfiguration
 
 class ThreadStateError(Exception):
     """Handles errors with this module's state."""
-    pass
+    def __init__(self,msg,thread=None):
+        self.msg = msg
+        self.thread = thread if thread is not None else '__main__'
+        
+    def __str__(self):
+        return u"%s on %s: %s" % (self.__class__.__name__,self.thread,self.msg)
         
 
-class ObjectsThread(object):
-    """A manager for handling many threaded objects which take from a single job queue and return to a single job queue."""
-    def __init__(self, Oclass, *args, **kwargs):
+class ObjectsManager(ObjectManager):
+    """A manager for handling many threaded objects which take from a single job queue and return to a single job queue.
+    
+    :param object Oclass: The class which will be instantiated in the new thread.
+    :param args: Any positional arguments to be used upon instantiation of this class.
+    :param kwargs: Any keyword arguments to be used upon instatiation of this class. Some values are reserved.
+    :keyword nprocs: The number of threads to use from this manager. Defaults to `cpu_count()`.
+    :keyword timeout: The number of seconds for any thread operation to timeout. Defualts to `10`.
+    :keyword input_Q: This keyword will be used by the object to pass the input Queue.
+    :keyword output_Q: This keyword will be used by the object to pass the output Queue
+    """
+    def __init__(self, Oclass, args=(), kwargs={}, nprocs=None, input_Q = None, output_Q = None):
         super(ObjectsThread, self).__init__()
         self.Oclass = Oclass
         self._args = args
-        self._nprocs = kwargs.pop('nprocs',cpu_count())
+        self._nprocs = cpu_count() if nprocs is None else nprocs
         self._kwargs = kwargs
         self._started = False
-        self.input = Queue()
-        self.output = Queue()
-        self._kwargs['input_Q'] = self.input
-        self._kwargs['output_Q'] = self.output
-        self._procs = [ObjectThread(self.Oclass,*self._args,**self._kwargs) for i in xrange(self._nprocs)]
+        self.input = Queue() if input_Q is None else input_Q
+        self.output = Queue() if output_Q is None else output_Q
+        self._timeout = kwargs.get('timeout',10)
+        self._procs = [ ObjectThread(self.Oclass,args=self._args,kwargs=self._kwargs,input_Q=self.input, output_Q=self.output ) for i in xrange(self._nprocs) ]
         
     @property
     def started(self):
@@ -68,69 +81,40 @@ class ObjectsThread(object):
     def empty(self):
         """Lets us know if the output queue is empty"""
         return self.output.empty()
-    
-    def retrieve(self,inputs=False):
-        """Retrieve a return value off the top of the output queue"""
-        func,args,kwargs,rvalue = self.output.get(timeout=10)
-        if inputs:
-            return func,args,kwargs,rvalue
-        else:
-            return rvalue
         
     def stop(self):
         """Send the thread stop signal."""
         for proc in self._procs:
-            self.input.put((proc.STOP,None,None),timeout=10)
-        while not self.output.empty():
-            self.retrieve()
+            self.input.put((proc.STOP,None,None),timeout=self._timeout)
         for proc in self._procs:
-            proc.join(timeout=10)
+            proc.join(timeout=self._timeout)
 
+    def terminate(self):
+        """Terminate all attached threads."""
         
-    
 
-class ObjectThread(Process):
-    """A thread management object for single object threads"""
-    def __init__(self, Oclass, *args, **kwargs):
-        super(ObjectThread, self).__init__()
+class ObjectThread(ObjectManager,Process):
+    """docstring for ObjectThread"""
+    def __init__(self, Oclass, args=(), kwargs={},**kwargs):
+        super(ObjectThread, self).__init__(**kwargs)
         self.Oclass = Oclass
-        self.input = kwargs.pop('input_Q',Queue())
-        self.output = kwargs.pop('output_Q',Queue())
         self._args = args
         self._kwargs = kwargs
-        
+    
     STOP = '..stop'
     
-    def __getattr__(self,attr):
-        """Call a method on the underlying threaded object"""
-        
-        def method(*args,**kwargs):
-            """A threaded method"""
-            self.input.put((attr,args,kwargs),timeout=10)
-            
-        return method
-    
-    def retrieve(self,inputs=False):
-        """Retrieve a return value off the top of the output queue"""
-        func,args,kwargs,rvalue = self.output.get(timeout=10)
-        if inputs:
-            return func,args,kwargs,rvalue
-        else:
-            return rvalue
-        
     def stop(self):
         """Send the thread stop signal."""
-        self.input.put((self.STOP,None,None),timeout=10)
-        while not self.output.empty():
-            self.retrieve()
+        self.input.put((self.STOP,None,None),timeout=self._timeout)
+        self.clear()
         self.join()
-        
+    
     def run(self):
         """starts an opactiy thread which takes a queue of items."""
         O = self.Oclass(*self._args, **self._kwargs)
         done = False
         while not done:
-            func, args, kwargs = self.input.get(timeout=10)
+            func, args, kwargs = self.input.get(timeout=self._timeout)
             if self.STOP == func:
                 done = True
             else:
@@ -140,10 +124,51 @@ class ObjectThread(Process):
                         rvalue = attr(*args,**kwargs)
                     elif len(args)==0 and len(kwargs)==0:
                         rvalue = attr
+                    elif len(args)==1 and len(kwargs)==0:
+                        setattr(O,func,args)
                     else:
                         raise AttributeError("Asked for attribute with arguments!")
                     if rvalue is not None:
-                        self.output.put((func,args,kwargs,rvalue),timeout=10)
+                        self.output.put((func,args,kwargs,rvalue),timeout=self._timeout)
                 except Exception:
                     done = True
                     raise
+        
+    
+
+class ObjectManager(object):
+    """A thread management object for single object threads"""
+    def __init__(self,input_Q=None, output_Q=None, timeout=10, **kwargs):
+        super(ObjectThread, self).__init__(**kwargs)
+        self.input = Queue() if input_Q is None else input_Q
+        self.output = Queue() if output_Q is None else output_Q
+        self._timeout = timeout
+    
+    def __getattr__(self,attr):
+        """Call a method on the underlying threaded object"""
+        
+        def method(*args,**kwargs):
+            """A threaded method"""
+            self.input.put((attr,args,kwargs),timeout=self._timeout)
+            
+        return method
+    
+    def retrieve(self,inputs=False,timeout=None):
+        """Retrieve a return value off the top of the output queue"""
+        timeout = self._timeout if timeout is None else timeout
+        func,args,kwargs,rvalue = self.output.get(timeout=timeout)
+        if inputs:
+            return func,args,kwargs,rvalue
+        else:
+            return rvalue
+        
+    def clear(self):
+        """Clear and join the queues"""
+        with self.output.mutex:
+            self.output.clear()
+        with self.input.mutex:
+            self.input.clear()
+        
+
+        
+    
