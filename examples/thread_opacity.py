@@ -13,14 +13,14 @@
 from __future__ import division
 
 from pystellar.opacity import OpacityTable
-from pystellar.threading import ObjectsThread
+from pystellar.threading import ObjectsManager
 
 import numpy as np
 import time
 
 print "--Launching Thread"
 start = time.clock()
-OT = ObjectsThread(OpacityTable,nprocs=4,kwargs=dict(fkey='OP17',X=0.70,Y=0.28))
+OT = ObjectsManager(OpacityTable,nprocs=4,ikwargs=dict(fkey='OP17',X=0.70,Y=0.28))
 OT.start()
 finish = time.clock()
 print "--Threads Launched: %g" % (finish-start)
