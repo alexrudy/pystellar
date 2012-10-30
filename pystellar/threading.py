@@ -157,7 +157,7 @@ class ObjectsManager(ObjectManager):
     :keyword output_Q: This keyword will be used by the object to pass the output Queue.
     
     """
-    def __init__(self, Oclass, iargs=(), ikwargs={}, nprocs=None, timeout=10 input_Q = None, output_Q = None):
+    def __init__(self, Oclass, iargs=(), ikwargs={}, nprocs=None, timeout=10, input_Q = None, output_Q = None):
         super(ObjectsManager, self).__init__()
         self.Oclass = Oclass
         self._args = iargs
