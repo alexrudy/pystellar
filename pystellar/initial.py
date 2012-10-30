@@ -91,7 +91,7 @@ def load_outer(R,L,M,mu,opfunc):
     Phuh = 0 #TODO: We need some pressure here as our initial guess, in order to get density, in order to get pressure.
     T = outer_temperature(R=R,L=L)
     rho = density(P=Phuh,T=T,mu=mu) #TODO: Finish this function...
-    kappa = opfunc(logT=np.log(T),logrho=np.log(rho))
+    kappa = opfunc(T=T,rho=rho)
     P = outer_pressure(R=R,M=M,kappa=kappa)
     return (r,l,P,T)
     
@@ -111,7 +111,7 @@ def inner_pressure(Pc,rho,m):
     r"""Inner pressure boundary of the system, given a specified density and mass step, and a central pressure.
     
     .. math::
-        P(m=m_0) = P_c - \frac{3 G}{8 \pi} * \left(\frac{4 \pi}{3})\right)^{4/3} m^{2/3}
+        P(m=m_0) = P_c - \frac{3 G}{8 \pi} * \left(\frac{4 \pi}{3}\right)^{4/3} m^{2/3}
     
     :param Pc: Central Pressure, :math:`P_c`
     :param rho: Central density, :math:`\rho_c`
