@@ -49,10 +49,19 @@ import logging
 # Alex's modules
 from AstroObject.config import DottedConfiguration
 
-class ThreadStateError(Exception):
+# Internal Modules
+from .errors import CodedError
+
+class ThreadStateError(CodedError):
     """Handles errors with this module's state."""
-    def __init__(self,msg,thread=None):
-        self.msg = msg
+    
+    codes = {
+        2**1 : "Immutable thread pool",
+        2**2 : "Subthread Error",
+    }
+    
+    def __init__(self,msg,code=0,thread=None):
+        super(ThreadStateError, self).__init__(msg, code)
         self.thread = thread if thread is not None else '__main__'
         
     def __str__(self):
@@ -130,9 +139,9 @@ class ObjectThread(ObjectManager,Process):
                         raise AttributeError("Asked for attribute with arguments!")
                     if rvalue is not None:
                         self.output.put((func,args,kwargs,rvalue),timeout=self._timeout)
-                except Exception:
+                except Exception as e:
                     done = True
-                    raise
+                    raise ThreadStateError(msg=str(e),code=2**2,thread=self.pid)
         
 
 
@@ -145,9 +154,10 @@ class ObjectsManager(ObjectManager):
     :keyword nprocs: The number of threads to use from this manager. Defaults to `cpu_count()`.
     :keyword timeout: The number of seconds for any thread operation to timeout. Defualts to `10`.
     :keyword input_Q: This keyword will be used by the object to pass the input Queue.
-    :keyword output_Q: This keyword will be used by the object to pass the output Queue
+    :keyword output_Q: This keyword will be used by the object to pass the output Queue.
+    
     """
-    def __init__(self, Oclass, iargs=(), ikwargs={}, nprocs=None, input_Q = None, output_Q = None):
+    def __init__(self, Oclass, iargs=(), ikwargs={}, nprocs=None, timeout=10 input_Q = None, output_Q = None):
         super(ObjectsManager, self).__init__()
         self.Oclass = Oclass
         self._args = iargs
@@ -156,7 +166,7 @@ class ObjectsManager(ObjectManager):
         self._started = False
         self.input = Queue() if input_Q is None else input_Q
         self.output = Queue() if output_Q is None else output_Q
-        self._timeout = ikwargs.get('timeout',10)
+        self._timeout = timeout
         self._procs = [ ObjectThread(self.Oclass,iargs=self._args,ikwargs=self._kwargs,input_Q=self.input, output_Q=self.output ) for i in xrange(self._nprocs) ]
         
     @property
@@ -166,7 +176,7 @@ class ObjectsManager(ObjectManager):
     def start(self):
         """docstring for fname"""
         if self.started:
-            raise ThreadStateError("Thread pool already started")
+            raise ThreadStateError("Thread pool already started",code=2**1)
         for proc in self._procs:
             proc.start()
         self._started = True
@@ -187,10 +197,13 @@ class ObjectsManager(ObjectManager):
         
     def stop(self):
         """Send the thread stop signal."""
+        if not self.started:
+            raise ThreadStateError("Thread pool not started",code=2**1)
         for proc in self._procs:
             self.input.put((proc.STOP,None,None),timeout=self._timeout)
         for proc in self._procs:
             proc.join(timeout=self._timeout)
+        self._started = False
 
     def terminate(self):
         """Terminate all attached threads."""
