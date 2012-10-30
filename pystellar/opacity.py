@@ -36,8 +36,12 @@ from warnings import warn
 from multiprocessing import Queue, Process
 
 import logging
+
 # Alex's modules
 from AstroObject.config import DottedConfiguration
+
+# Internal Modules
+from .errors import CodedError
 
 log = logging.getLogger(__name__)
 
@@ -172,6 +176,19 @@ def read_table_opal(fkey,cfg):
     
     return comp, tbls
 
+class OpacityTableError(CodedError):
+    """Error raised due to a poor configuration of the opacity table."""
+    
+    codes = {
+        2**1 : "Interpolator was not initialized with a composition"
+    }
+    
+    def __str__(self):
+        """Set the string representation of this object."""
+        if self.msg is None and self.code in self.codes:
+            self.msg = self.codes[self.code]
+        return super(OpacityTableError, self).__str__()
+        
 
 class OpacityTable(object):
     """This object can interpolate across opacity table information.
@@ -189,6 +206,7 @@ class OpacityTable(object):
         self._Y = None
         self._dXc = None
         self._dXo = None
+        self._interpolator = None
         
         # Set up the configuration
         self.fkey = fkey
@@ -246,17 +264,17 @@ class OpacityTable(object):
         log.info("Created Interpolator")
         
     def read(self):
-        """Read the opacity tables from an OPAL file"""
+        """Read the opacity tables from an OPAL file."""
         self._comp, self._tbls = read_table_opal(self.fkey,cfg=self.cfg)
         
     def load(self):
-        """Load the interpolator values from a file."""
+        """Load the interpolator values from a pair of files. Will load from two numpy files the composition table and the opacity tables."""
         c = self.cfg[self.fkey]
         self._comp = np.load("%s.comp.npy" % c["filename"])
         self._tbls = np.load("%s.tbls.npy" % c["filename"])
         
     def save(self):
-        """Save this interpolator to a file"""
+        """Save this interpolator to a numpy file. The composition and tables will be saved to separate tables."""
         c = self.cfg[self.fkey]
         np.save("%s.comp.npy" % c["filename"],self._comp)
         np.save("%s.tbls.npy" % c["filename"],self._tbls)
@@ -288,15 +306,33 @@ class OpacityTable(object):
         
     @property
     def n(self):
-        """Table number"""
+        """Table number currently in use."""
         return self._n
         
     def properties(self):
-        """Return the properties of this object as a tuple"""
+        """Return the properties of this object as a tuple:
+        
+        (n, X, Y, Z, dXc, dXo)
+        
+        """
         return (self.n, self.X, self.Y, self.Z, self.dXc, self.dXo)
         
     def composition(self,X,Y,dXc=0.0,dXo=0.0):
-        """Set the composition for this sytem. Composition must b"""
+        ur"""Set the composition for this sytem. Composition must total to 1.0.
+        
+        Assumes that given X, Y, dXc, dXo, that
+        
+        .. math::
+            X + Y + dXc + dXo = 1 - Z
+            
+        
+        :param X: Fractional content of hydrogen.
+        :param Y: Fractional content of helium.
+        :param dXc: Fractional content of carbon.
+        :param dXo: Fractional content of oxygen.
+        
+        This function will interpolate to the nearest composition value that it can find. As such, beware that the requested composition will be moved to the nearest acceptable composition in the current opacity tables.
+        """
         assert X + Y + dXc + dXo <= 1.0, u"Composition must be less than or equal to 1.0! ∑X=%0.1f" % (X + Y + dXc + dXo)
         if X == self.X and Y == self.Y and dXc == self.dXc and dXo == self.dXo:
             log.debug("Values are unchanged")
@@ -307,10 +343,19 @@ class OpacityTable(object):
         self._Y = self._comp[self.n,1]
         self._dXc = self._comp[self.n,2]
         self._dXo = self._comp[self.n,3]
+        if X != self.X or Y != self.Y or dXc != self.dXc or dXo != self.dXo:
+            log.warning("Interoplation reached a nearby value, not exact requested composition: X=%.4f, Y=%.4f, dXc=%.4f, dXo=%.4f" % (self.X, self.Y, self.dXc, self.dXo))
+        
         self._temperature_density_interpolator()
         
     def invert_points(self,logR,logT):
-        """Return a log(rho) and log(T) for us."""
+        ur"""Return a log(rho) and log(T) for us.
+        
+        :param logR: An array (or single value) of :math:`\log(R)` (Table Units).
+        :param logT: An array (or single value) of :math:`\log(T)` (Table Units).
+        :returns: An array of [:math:`\log(\rho)`, :math:`\log(T)` ].
+        
+        """
         logR = np.asarray(logR)
         logT = np.asarray(logT)
         R = np.power(10,logR)
@@ -321,7 +366,13 @@ class OpacityTable(object):
         return np.vstack((logrho,logT)).T
         
     def _make_points(self,logrho,logT):
-        """Convert the units for a point into proper table units"""
+        ur"""Convert the units for a point into proper table units.
+        
+        :param logrho: An array (or single value) of :math:`\log(\rho)`.
+        :param logT: An array (or single value) of :math:`\log(T)`.
+        :returns: An array of [:math:`\log(R)`, :math:`\log(T)` ].
+        
+        """
         logrho = np.asarray(logrho)
         logT = np.asarray(logT)
         T6 = 1e-6 * (np.power(10,logT))
@@ -331,12 +382,17 @@ class OpacityTable(object):
         return np.vstack((logR,logT)).T
         
     def check_range(self,points):
-        """Check the range of this point"""
+        ur"""Check the range of this point compared to the opacity table range.
+        
+        :param np.array points: An array of :math:`\log(\rho)` and :math:`\log(T)` to be checked.
+        :raises: :exc:`ValueError` when points are out of bounds.
+        
+        """
         maxes = np.array([(points[:,i] <= np.max(self._tbls[self.n,:,i])).any() for i in xrange(2)]).all()
         mines = np.array([(points[:,i] >= np.min(self._tbls[self.n,:,i])).any() for i in xrange(2)]).all()
         if (mines and maxes):
             log.debug("Passed Tests: %r, %r" % (mines,maxes))
-            return
+            return True
         
         for point in points:
             for ind,ele in enumerate(point):
@@ -348,7 +404,18 @@ class OpacityTable(object):
         raise RuntimeError("BOUNDS: Error Index Unknown!!!, %r" % points)
         
     def lookup(self,points=None,logrho=None,logT=None):
-        """A lookup function for our interpolator."""
+        ur"""
+        A lookup function for our interpolator. Does the pure lookup.
+        
+        :param points: An array of :math:`\log(\rho)` and :math:`\log(T)`
+        :param logrho: An array (or single value) of :math:`\log(\rho)` used only when `points` is not provided.
+        :param logT: An array (or single value) of :math:`\log(T)` used only when `points` is not provided.
+        :returns: κ, an array of the rosseland mean opacity.
+        
+        """
+        if self._interpolator is None:
+            raise OpacityTableError(code=2**1)
+        
         if points is None:
             assert logrho is not None, u"Must provide a log(ρ)=?"
             assert logT is not None, u"Must provide a log(T)=?"
@@ -363,4 +430,21 @@ class OpacityTable(object):
         if np.isnan(kappa).any():
             raise ValueError("BOUNDS: Interpolator returned NaN")
         return kappa
+        
+    def kappa(self,logrho=None,logT=None,rho=None,T=None):
+        ur"""Return a rosseland mean opacity at a temperature and density.
+        
+        :param logrho: Logarithmic Density, base 10, :math:`\log(\rho)`
+        :param rho: Density. Accepts `logrho` or `rho`.
+        :param logT: Logarithmic Temperature, :math:`\log(T)`
+        :param T: Temperature. Accepts `logT` or `T`.
+        :returns: κ, the rosseland mean opacity.
+        
+        """
+        assert logrho is not None ^ rho is not None, u"Must provide one and only one value for ρ."
+        assert logT is not None ^ T is not None, u"Must provide one and only one value for T"
+        
+        logT = logT if logT is not None else np.log10(T)
+        logrho = logrho if logrho is not None else np.log10(rho)
+        return self.lookup(logT=logT,logrho=logrho)
     
