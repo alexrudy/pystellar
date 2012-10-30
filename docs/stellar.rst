@@ -1,0 +1,2 @@
+.. automodule:: pystellar.stellar
+    :members:

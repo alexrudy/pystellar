@@ -16,8 +16,9 @@ These are the primary modules which implement components of the stellar model.
 .. toctree::
     :maxdepth: 2
     
-    density
+    stellar
     initial
+    density
     opacity
     
 
