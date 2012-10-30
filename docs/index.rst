@@ -6,8 +6,12 @@
 Welcome to PyStellar's documentation!
 =====================================
 
+PyStellar is a 1-D stellar modelling code for a star. Developed for Ay220a at UCSC Astronomy.
+
 Stellar Model Functions
 ***********************
+
+These are the primary modules which implement components of the stellar model.
 
 .. toctree::
     :maxdepth: 2
@@ -17,6 +21,16 @@ Stellar Model Functions
     opacity
     
 
+Basic Physics Functions
+***********************
+
+Basic physics are implemented in the following moduels:
+
+.. toctree::
+    :maxdepth: 2
+    
+    constants
+
 Python Management Functions
 ***************************
 
@@ -24,6 +38,11 @@ Python Management Functions
     :maxdepth: 2
     
     threading
+
+Development
+***********
+
+.. todolist::
 
 
 Indices and tables

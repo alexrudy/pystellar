@@ -1,2 +1,1 @@
-.. automodule::
-    pystellar.density
+.. automodule:: pystellar.density
