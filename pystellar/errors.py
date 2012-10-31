@@ -12,7 +12,7 @@ class CodedError(Exception):
     """Handles errors with this module's state."""
     def __init__(self,msg,code=0):
         self.msg = msg
-        self.code = 0
+        self.code = code
         
     def __str__(self):
         return u"%s:%d: %s" % (self.__class__.__name__,self.code,self.msg)
