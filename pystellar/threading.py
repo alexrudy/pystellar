@@ -141,10 +141,34 @@ class ObjectThread(ObjectManager,Process):
                         self.output.put((func,args,kwargs,rvalue),timeout=self._timeout)
                 except Exception as e:
                     done = True
-                    raise ThreadStateError(msg=str(e),code=2**2,thread=self.pid)
+                    raise #ThreadStateError(msg=str(e),code=2**2,thread=self.pid)
         
 
-
+class ObjectPassthrough(ObjectThread):
+    """An object which simply perfoms the passthrough to a thread."""
+    def __init__(self, *args, **kwargs):
+        self.nprocs = kwargs.pop('nprocs',0)
+        super(ObjectPassthrough, self).__init__(*args, **kwargs)
+    
+    def start(self):
+        """Starts this object"""
+        self._started = True
+        
+    def retrieve(self,inputs=False,timeout=None):
+        """Retrieve a return value off the top of the output queue"""
+        timeout = self._timeout if timeout is None else timeout
+        self.stop()
+        self.run()
+        func,args,kwargs,rvalue = self.output.get(timeout=timeout)
+        if inputs:
+            return func,args,kwargs,rvalue
+        else:
+            return rvalue
+        
+    def stop(self):
+        """Send the thread stop signal."""
+        self.input.put((self.STOP,None,None),timeout=self._timeout)
+        
 class ObjectsManager(ObjectManager):
     """A manager for handling many threaded objects which take from a single job queue and return to a single job queue.
     
@@ -169,6 +193,8 @@ class ObjectsManager(ObjectManager):
         self._timeout = timeout
         self._procs = [ ObjectThread(self.Oclass,iargs=self._args,ikwargs=self._kwargs,input_Q=self.input, output_Q=self.output ) for i in xrange(self._nprocs) ]
         
+    
+    
     @property
     def started(self):
         return self._started
