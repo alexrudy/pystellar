@@ -51,7 +51,11 @@ import numpy as np
 
 from .density import density
 
-def load_inner(Pc,Tc,M,mu,m):
+import logging
+
+log = logging.getLogger(__name__)
+
+def load_inner(Pc,Tc,M,mu,m,epsilon):
     r"""Load our inner boundary conditions for our star.
     
     :param Pc: Central Pressure, :math:`P_c`
@@ -67,12 +71,12 @@ def load_inner(Pc,Tc,M,mu,m):
     """
     rhoc = density(P=Pc,T=Tc,mu=mu)
     r = inner_radius(rho=rhoc,m=m)
-    l = 0 #TODO: I'm not sure about this!
+    l = m * epsilon #TODO: I'm not sure about this!
     P = inner_pressure(Pc=Pc,rho=rhoc,m=m)
     T = inner_temperature(Tc=Tc,Pc=Pc,rho=rho,m=m)
     return (r,l,P,T)
     
-def load_outer(R,L,M,mu,opfunc):
+def load_outer(R,L,M,mu,optable,Pguess=10):
     r"""Load the outer boundary conditions for our star.
     
     :param R: Stellar Radius
@@ -86,14 +90,18 @@ def load_outer(R,L,M,mu,opfunc):
         Fix recursive dependency between opacity and pressure for initial conditions. Maybe provide an initial rosseland mean opacity?
     
     """
+    from scipy.optimize import fminbound
+    
     r = R
     l = L
-    Phuh = 0 #TODO: We need some pressure here as our initial guess, in order to get density, in order to get pressure.
     T = outer_temperature(R=R,L=L)
-    rho = density(P=Phuh,T=T,mu=mu) #TODO: Finish this function...
-    kappa = opfunc(T=T,rho=rho)
-    P = outer_pressure(R=R,M=M,kappa=kappa)
+    Pguess1 = find_pressure_guess(Pguess=1e1,T=T,mu=mu,optable=optable)
+    Pguess2 = find_pressure_guess(Pguess=1e10,T=T,mu=mu,optable=optable,increase=False)
+    P, cost, ierr, numiter = fminbound(func=outer_pressure_cost,args=(R,T,M,mu,optable),x1=Pguess1,x2=Pguess2,full_output=True)
+    if ierr:
+        log.warning("No pressure convergance around P=[%g,%g]: Cost Remaining=%g" % (Pguess1,Pguess2,cost))
     return (r,l,P,T)
+    
     
 def inner_radius(rho,m):
     r"""Inner radius to use, as a function of central density and initial step mass.
@@ -156,6 +164,13 @@ def outer_pressure(R,M,kappa):
     from .constants import G
     return (G * M)/np.power(R,2) * 2/3 * 1/kappa
     
+def outer_pressure_cost(P,R,T,M,mu,optable):
+    """Outer pressure cost function for the boundary condition."""
+    rho = density(P=P,T=T,mu=mu)
+    optable.kappa(T=T,rho=rho)
+    Pout = outer_pressure(R=R,M=M,kappa=optable.retrieve())
+    return Pout - P
+    
 def outer_temperature(R,L):
     r"""Outer temperature at the boundary condition
     
@@ -166,7 +181,24 @@ def outer_temperature(R,L):
     :param R: Stellar Radius
     :param L: Total luminosity
     """
-    return np.power(L/(4*np.pi*np.power(R,2)), 1/4)
+    from .constants import sigmab
+    return np.power(L/(4*np.pi*np.power(R,2)*sigmab), 1/4)
+    
+def find_pressure_guess(Pguess,T,mu,optable,increase=True):
+    """Find a good initial pressure guess. Searches logarithmically, and checks to see if the guess is on the opacity table."""
+    goodguess = False
+    while not goodguess:
+        rho = density(P=Pguess,T=T,mu=mu)
+        points = np.array([np.log10(rho),np.log10(T)])
+        optable.validate(points,Describe=True)
+        goodguess,code,string = optable.retrieve()
+        if not goodguess and code != 2**2:
+            raise ValueError(string + " T=%g" % T)
+        if increase:
+            Pguess *= 10
+        else:
+            Pguess *= 0.1
+    return Pguess
     
 # For conformity with the "Numerical Recipies" names:
 
