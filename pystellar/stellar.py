@@ -61,6 +61,9 @@ def dTdm(m,T,r,P,grad):
     :param r: Radius enclosed
     :param P: Pressure enclosed
     :param grad: The temperature gradient locally.
+    
+    .. todo::
+        Figure out how this function should actually handle the temperature gradient
     """
     from .constants import G
     return -(G*m*T)/(4 * np.pi * np.power(r,4) * P)
