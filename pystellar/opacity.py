@@ -180,7 +180,11 @@ class OpacityTableError(CodedError):
     """Error raised due to a poor configuration of the opacity table."""
     
     codes = {
-        2**1 : "Interpolator was not initialized with a composition"
+        2**0 : "Unkown Error!",
+        2**1 : "Interpolator was not initialized with a composition",
+        2**2 : "Interpolation value for LogR was outside bounds",
+        2**3 : "Interpolation value for LogT was outside bounds",
+        2**4 : "Interpolation value failed for unkown reason",
     }
     
     def __str__(self):
@@ -381,7 +385,29 @@ class OpacityTable(object):
         logR = np.log10(R)
         return np.vstack((logR,logT)).T
         
-    def check_range(self,points):
+    def validate(self,points,RMode=False,Describe=False):
+        ur"""Return a boolean if the points guessed are in the table at all.
+        
+        :param np.array points: An array of :math:`\log(\rho)` and :math:`\log(T)` to be checked.
+        :param bool RMode: Whether to assume [logR,logT] (else, assume [logrho,logT])
+        :returns: True if the points fit within the table.
+        """
+        if not RMode:
+            points = self._make_points(*points)
+        try:
+            self.__valid__(points)
+        except OpacityTableError as e:
+            if Describe:
+                return False, e.code, e.codes[e.code]
+            else:
+                return False
+        else:
+            if Describe:
+                return True, 0, "No Error"
+            else:
+                return True
+        
+    def __valid__(self,points):
         ur"""Check the range of this point compared to the opacity table range.
         
         :param np.array points: An array of :math:`\log(\rho)` and :math:`\log(T)` to be checked.
@@ -394,14 +420,16 @@ class OpacityTable(object):
             log.debug("Passed Tests: %r, %r" % (mines,maxes))
             return True
         
+        cols = {0:"logR",1:"logT"}
+        
         for point in points:
             for ind,ele in enumerate(point):
                 if ele > np.max(self._tbls[self.n,:,ind]):
-                    raise ValueError("BOUNDS: p[%g]=%g > %g" % (ind,ele,np.max(self._tbls[self.n,:,ind])))
+                    raise OpacityTableError(msg="BOUNDS: %s=%g > %g" % (cols[ind],ele,np.max(self._tbls[self.n,:,ind])),code=2**(ind+2))
                 elif ele < np.min(self._tbls[self.n,:,ind]):
-                    raise ValueError("BOUNDS: p[%g]=%g < %g" % (ind,ele,np.min(self._tbls[self.n,:,ind])))
+                    raise OpacityTableError(msg="BOUNDS: %s=%g < %g" % (cols[ind],ele,np.min(self._tbls[self.n,:,ind])),code=2**(ind+2))
                     
-        raise RuntimeError("BOUNDS: Error Index Unknown!!!, %r" % points)
+        raise OpacityTableError(msg="BOUNDS: Error Index Unknown!!!, %r" % points,code=2**4)
         
     def lookup(self,points=None,logrho=None,logT=None):
         ur"""
@@ -425,7 +453,7 @@ class OpacityTable(object):
         else:
             points = self._make_points(logrho=points[:,0],logT=points[:,1])
         
-        self.check_range(points)
+        self.__valid__(points)
         kappa = self._interpolator(points)
         if np.isnan(kappa).any():
             raise ValueError("BOUNDS: Interpolator returned NaN")
@@ -441,10 +469,10 @@ class OpacityTable(object):
         :returns: κ, the rosseland mean opacity.
         
         """
-        assert logrho is not None ^ rho is not None, u"Must provide one and only one value for ρ."
-        assert logT is not None ^ T is not None, u"Must provide one and only one value for T"
+        assert (logrho is not None) ^ (rho is not None), u"Must provide one and only one value for ρ."
+        assert (logT is not None) ^ (T is not None), u"Must provide one and only one value for T"
         
         logT = logT if logT is not None else np.log10(T)
         logrho = logrho if logrho is not None else np.log10(rho)
-        return self.lookup(logT=logT,logrho=logrho)
+        return np.power(self.lookup(logT=logT,logrho=logrho),10)
     
