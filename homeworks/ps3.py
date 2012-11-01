@@ -15,13 +15,13 @@ from pystellar.initial import inner_boundary, outer_boundary
 from pystellar.density import mmw
 from pystellar.opacity import OpacityTable
 from pystellar.stellar import derivatives
-from pystellar.threading import ObjectsManager,ObjectPassthrough,EngineManager
+from pystellar.threading import ObjectsManager,ObjectPassthrough,EngineManager,ObjectThread
 
 print "Stellar Structure Problem Set #2"
 X = 0.700
 Y = 0.280
 epsilon = 0.001
-Opacity = ObjectsManager(OpacityTable,nprocs=1,ikwargs=dict(fkey='GN93hz',X=X,Y=Y))
+Opacity = ObjectThread(OpacityTable,ikwargs=dict(fkey='GN93hz',X=X,Y=Y),locking=True)
 Opacity.start()
 
 print "Problem #4:"
