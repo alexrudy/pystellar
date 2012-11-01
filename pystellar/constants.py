@@ -36,6 +36,7 @@ Other constants
 ***************
 
 """
+from __future__ import division
 
 # cgs units!!
 from astropysics.constants import c, mp, kb, G
