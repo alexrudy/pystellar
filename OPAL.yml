@@ -1,3 +1,34 @@
+OPT:
+  filename: data/opacity_project_table.txt
+  header:
+    begin: 0
+    end: 60
+  summary:
+    begin: 60
+    end: 240
+    head: 2
+    foot: 51
+    cols:
+      - 11
+      - 20
+      - 9
+      - 9
+      - 9
+      - 10
+      - 10
+  tables:
+    begin: 240
+    end: 0
+    head: 0
+    num: 126
+  table:
+    begin: 0
+    end: 76
+    head: 5
+    foot: 0
+    cols: 20
+    chars: 7
+    header: 4
 GN93hz:
   filename: data/GN93hz
   header:
