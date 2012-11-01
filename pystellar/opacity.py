@@ -352,7 +352,8 @@ class OpacityTable(object):
         
         self._temperature_density_interpolator()
         
-    def invert_points(self,logR,logT):
+    @classmethod
+    def invert_points(cls,logR,logT):
         ur"""Return a log(rho) and log(T) for us.
         
         :param logR: An array (or single value) of :math:`\log(R)` (Table Units).
@@ -369,12 +370,13 @@ class OpacityTable(object):
         logrho = np.log10(rho)
         return np.vstack((logrho,logT)).T
         
-    def _make_points(self,logrho,logT):
+    @classmethod
+    def make_points(cls,logrho,logT):
         ur"""Convert the units for a point into proper table units.
         
         :param logrho: An array (or single value) of :math:`\log(\rho)`.
         :param logT: An array (or single value) of :math:`\log(T)`.
-        :returns: An array of [:math:`\log(R)`, :math:`\log(T)` ].
+        :returns: An array of [:math:`\log(R)`, :math:`\log(T)`].
         
         """
         logrho = np.asarray(logrho)
@@ -393,7 +395,7 @@ class OpacityTable(object):
         :returns: True if the points fit within the table.
         """
         if not RMode:
-            points = self._make_points(*points)
+            points = self.make_points(*points)
         try:
             self.__valid__(points)
         except OpacityTableError as e:
@@ -406,6 +408,13 @@ class OpacityTable(object):
                 return True, 0, "No Error"
             else:
                 return True
+        
+    def bounds(self,logR=None,logT=None):
+        """Return the bounds of the selected opacity table."""
+        top = np.array([np.max(self._tbls[self.n,:,i]) for i in xrange(2)])
+        bot = np.array([np.min(self._tbls[self.n,:,i]) for i in xrange(2)])
+        return np.vstack((top,bot)).T
+        
         
     def __valid__(self,points):
         ur"""Check the range of this point compared to the opacity table range.
@@ -449,9 +458,9 @@ class OpacityTable(object):
             assert logT is not None, u"Must provide a log(T)=?"
             logrho = np.asarray(logrho)
             logT = np.asarray(logT)
-            points = self._make_points(logrho=logrho,logT=logT)
+            points = self.make_points(logrho=logrho,logT=logT)
         else:
-            points = self._make_points(logrho=points[:,0],logT=points[:,1])
+            points = self.make_points(logrho=points[:,0],logT=points[:,1])
         
         self.__valid__(points)
         kappa = self._interpolator(points)
@@ -474,5 +483,5 @@ class OpacityTable(object):
         
         logT = logT if logT is not None else np.log10(T)
         logrho = logrho if logrho is not None else np.log10(rho)
-        return np.power(self.lookup(logT=logT,logrho=logrho),10)
+        return np.power(10,self.lookup(logT=logT,logrho=logrho))
     
