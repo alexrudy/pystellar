@@ -13,22 +13,26 @@
 from __future__ import division
 
 from pystellar.opacity import OpacityTable
-from pystellar.threading import ObjectsManager
+from pystellar.threading import ObjectsManager, EngineManager
 
 import numpy as np
 import time
 
 print "--Launching Thread"
 start = time.clock()
-OT = ObjectsManager(OpacityTable,nprocs=4,ikwargs=dict(fkey='OP17',X=0.70,Y=0.28))
+OT = EngineManager(OpacityTable,nprocs=1,ikwargs=dict(fkey='OP17',X=0.70,Y=0.28))
 OT.start()
 finish = time.clock()
 print "--Threads Launched: %g" % (finish-start)
+
+
 print "++Launching Object"
 start = time.clock()
 OO = OpacityTable(fkey='GN93hz',X=0.70,Y=0.28)
 finish = time.clock()
 print "++Object Launched: %g" % (finish-start)
+
+
 print "--Get Composition"
 start = time.clock()
 OT.properties()
@@ -37,6 +41,8 @@ print u"Fixed composition at X=%.3g,Y=%.3g,Z=%.3g" % (X,Y,Z)
 print u"Using table %d" % (n + 1)
 finish = time.clock()
 print "--Got Composition: %g" % (finish-start)
+
+
 print "++Get Composition"
 start = time.clock()
 n,X,Y,Z,dXc,dXo = OO.properties()
@@ -44,6 +50,7 @@ print u"Fixed composition at X=%.3g,Y=%.3g,Z=%.3g" % (X,Y,Z)
 print u"Using table %d" % (n + 1)
 finish = time.clock()
 print "++Got Composition: %g" % (finish-start)
+
 
 ntest = 1e4
 logTs   = np.linspace(4.0,6.3,ntest)

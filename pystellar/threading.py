@@ -43,7 +43,7 @@ import scipy as sp
 from pkg_resources import resource_filename
 from warnings import warn
 
-from multiprocessing import Queue, Process, Pool, cpu_count
+from multiprocessing import Queue, Process, Pool, Manager, Event, cpu_count, current_process
 
 import logging
 # Alex's modules
@@ -75,6 +75,8 @@ class ObjectManager(object):
         self.input = Queue() if input_Q is None else input_Q
         self.output = Queue() if output_Q is None else output_Q
         self._timeout = timeout
+        self.hdr = {}
+        self.hdr['pid'] = current_process().pid
     
     def __getattr__(self,attr):
         """Call a method on the underlying threaded object"""
@@ -88,9 +90,9 @@ class ObjectManager(object):
     def retrieve(self,inputs=False,timeout=None):
         """Retrieve a return value off the top of the output queue"""
         timeout = self._timeout if timeout is None else timeout
-        func,args,kwargs,rvalue = self.output.get(timeout=timeout)
+        hdr,func,args,kwargs,rvalue = self.output.get(timeout=timeout)
         if inputs:
-            return func,args,kwargs,rvalue
+            return func,args,kwargs,rvalue,hdr
         else:
             return rvalue
         
@@ -123,7 +125,7 @@ class ObjectThread(ObjectManager,Process):
         O = self.Oclass(*self._args, **self._kwargs)
         done = False
         while not done:
-            func, args, kwargs = self.input.get(timeout=self._timeout)
+            hdr, func, args, kwargs = self.input.get(timeout=self._timeout)
             if self.STOP == func:
                 done = True
             else:
@@ -138,7 +140,7 @@ class ObjectThread(ObjectManager,Process):
                     else:
                         raise AttributeError("Asked for attribute with arguments!")
                     if rvalue is not None:
-                        self.output.put((func,args,kwargs,rvalue),timeout=self._timeout)
+                        self.output.put((hdr,func,args,kwargs,rvalue),timeout=self._timeout)
                 except Exception as e:
                     done = True
                     raise #ThreadStateError(msg=str(e),code=2**2,thread=self.pid)
@@ -159,7 +161,7 @@ class ObjectPassthrough(ObjectThread):
         timeout = self._timeout if timeout is None else timeout
         self.stop()
         self.run()
-        func,args,kwargs,rvalue = self.output.get(timeout=timeout)
+        hdr,func,args,kwargs,rvalue = self.output.get(timeout=timeout)
         if inputs:
             return func,args,kwargs,rvalue
         else:
@@ -167,7 +169,7 @@ class ObjectPassthrough(ObjectThread):
         
     def stop(self):
         """Send the thread stop signal."""
-        self.input.put((self.STOP,None,None),timeout=self._timeout)
+        self.input.put((self.hdr,self.STOP,None,None),timeout=self._timeout)
         
 class ObjectsManager(ObjectManager):
     """A manager for handling many threaded objects which take from a single job queue and return to a single job queue.
@@ -212,7 +214,7 @@ class ObjectsManager(ObjectManager):
         
         def method(*args,**kwargs):
             """A threaded method"""
-            self.input.put((attr,args,kwargs))
+            self.input.put((self.hdr,attr,args,kwargs))
             
         return method
     
@@ -226,7 +228,7 @@ class ObjectsManager(ObjectManager):
         if not self.started:
             raise ThreadStateError("Thread pool not started",code=2**1)
         for proc in self._procs:
-            self.input.put((proc.STOP,None,None),timeout=self._timeout)
+            self.input.put((self.hdr,proc.STOP,None,None),timeout=self._timeout)
         for proc in self._procs:
             proc.join(timeout=self._timeout)
         self._started = False
@@ -235,5 +237,58 @@ class ObjectsManager(ObjectManager):
         """Terminate all attached threads."""
         
 
-
+class EngineManager(ObjectsManager,Process):
+    """Uses header values to handle directed requests and results."""
+    def __init__(self,*args,**kwargs):
+        super(EngineManager, self).__init__(*args,**kwargs)
+        self.manager = Manager()
+        self.results = self.manager.dict()
+        self.block = Event()
+        
+    def retrieve(self,jid=None,inputs=False,timeout=None,block=True):
+        """Retrieve a job given a jid"""
+        if jid is None:
+            jid = self.cjid
+        if block:
+            self.block.wait()
+        hdr,func,args,kwargs,rvalue = self.results[jid]
+        self.block.clear()
+        if inputs:
+            return func,args,kwargs,rvalue
+        else:
+            return rvalue
+    
+    def ready(self,jid):
+        """Check if a job id is ready."""
+        return jid in self.results
+        
+    
+    def __getattr__(self,attr):
+        """Call a method on the underlying threaded object"""
+        
+        def method(*args,**kwargs):
+            """A threaded method"""
+            jid = id((attr,args,kwargs))
+            self.cjid = jid
+            self.hdr["jid"] = jid
+            self.input.put((self.hdr,attr,args,kwargs))
+            return jid
+        
+        return method
+        
+    def start(self):
+        """Start"""
+        super(EngineManager, self).start()
+        
+    def run(self):
+        """Run the subthread to move things off the output."""
+        running = True
+        while running:
+            hdr,func,args,kwargs,rvalue = self.output.get()
+            if "stop" in hdr:
+                running = False
+            else:
+                self.results[hdr["jid"]] = (hdr,func,args,kwargs,rvalue)
+                self.block.set()
+        
     
