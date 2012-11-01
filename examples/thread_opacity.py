@@ -20,7 +20,7 @@ import time
 
 print "--Launching Thread"
 start = time.clock()
-OT = EngineManager(OpacityTable,nprocs=1,ikwargs=dict(fkey='OP17',X=0.70,Y=0.28))
+OT = ObjectsManager(OpacityTable,nprocs=1,ikwargs=dict(fkey='OP17',X=0.70,Y=0.28))
 OT.start()
 finish = time.clock()
 print "--Threads Launched: %g" % (finish-start)
@@ -63,7 +63,7 @@ start = time.clock()
 for i in xrange(ntest):
     OT.lookup(logT=logTs[i],logrho=logrhos[i])
 for i in xrange(ntest):
-    func, args, kwargs, rvalue = OT.retrieve(inputs=True)
+    func, args, kwargs, rvalue, hdr = OT.retrieve(inputs=True)
     logkappa[i,0] = rvalue
 finish = time.clock()
 print "--Done Interpolation: %g" % (finish-start)
