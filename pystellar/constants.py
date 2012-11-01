@@ -49,6 +49,7 @@ a = (4.0 * sigmab)/c
 mh = mp 
 """Mass of a hydrogen atom"""
 
-
+gradT_ad = 0.4
+"""Adiabatic Temperature Gradient"""
 
 
