@@ -74,7 +74,6 @@ def inner_boundary(Pc,Tc,M,mu,m,optable,epsilon):
     r = inner_radius(rho=rhoc,m=m)
     l = m * epsilon
     P = inner_pressure(Pc=Pc,rho=rhoc,m=m)
-    optable.kappa(rho=rhoc,T=Tc)
     T = inner_temperature(Tc=Tc,Pc=Pc,rho=rhoc,m=m,epsilon=epsilon,optable=optable)
     return (r,l,P,T)
     
@@ -150,6 +149,7 @@ def inner_temperature(Tc,Pc,rho,m,epsilon,optable,convective=True):
         lnT = np.log(Tc) - np.power(np.pi/6,1/3) * (gradT_ad * np.power(rho,4/3))/Pc * np.power(m,2/3)
         T = np.exp(lnT)
     else:
+        optable.kappa(rho=rhoc,T=Tc)
         T4 = np.power(Tc,4) - 1/(2*a*c) * np.power((3/(4*np.pi)),2/3) * optable.retrieve() * epsilon * np.power(rhoc,4/3) * np.power(m,2/3)
         T = np.power(T4,1/4)
     return T
