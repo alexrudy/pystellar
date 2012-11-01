@@ -74,10 +74,10 @@ def inner_boundary(Pc,Tc,M,mu,m,optable,epsilon):
     r = inner_radius(rho=rhoc,m=m)
     l = m * epsilon
     P = inner_pressure(Pc=Pc,rho=rhoc,m=m)
-    T = inner_temperature(Tc=Tc,Pc=Pc,rho=rhoc,m=m,epsilon=epsilon,optable=optable)
+    T = inner_temperature(Tc=Tc,Pc=Pc,rho=rhoc,m=m,epsilon=epsilon,optable=optable,convective=True)
     return (r,l,P,T)
     
-def outer_boundary(R,L,M,mu,optable,Pguess=10):
+def outer_boundary(R,L,M,mu,optable,Piter=False):
     r"""Load the outer boundary conditions for our star.
     
     :param R: Stellar Radius
@@ -96,8 +96,12 @@ def outer_boundary(R,L,M,mu,optable,Pguess=10):
     r = R
     l = L
     T = outer_temperature(R=R,L=L)
-    Pguess1 = find_pressure_guess(Pguess=1e1,T=T,mu=mu,optable=optable)
-    Pguess2 = find_pressure_guess(Pguess=1e10,T=T,mu=mu,optable=optable,increase=False)
+    if Piter:
+        Pguess1 = find_pressure_guess(Pguess=1e1,T=T,mu=mu,optable=optable)
+        Pguess2 = find_pressure_guess(Pguess=1e10,T=T,mu=mu,optable=optable,incr=0.5)
+    else:
+        Pbound, Tbound = get_pressure_guess(T=T,mu=mu,optable=optable)
+        Pguess2, Pguess1 = Pbound
     P, cost, ierr, numiter = fminbound(func=outer_pressure_cost,args=(R,T,M,mu,optable),x1=Pguess1,x2=Pguess2,full_output=True)
     if ierr:
         log.warning("No pressure convergance around P=[%g,%g]: Cost Remaining=%g" % (Pguess1,Pguess2,cost))
@@ -127,7 +131,7 @@ def inner_pressure(Pc,rho,m):
     :param m: Initial mass step from center of star.
     """
     from .constants import G
-    return Pc-(3*G)/(8*np.pi) * np.power((4*np.pi)/3 * rho, 4/3) * np.power(m,2/3)
+    return Pc - ((3*G)/(8*np.pi) * np.power((4*np.pi)/3 * rho, 4/3) * np.power(m,2/3))
     
 def inner_temperature(Tc,Pc,rho,m,epsilon,optable,convective=True):
     r"""Inner temperature for the core.
@@ -149,8 +153,9 @@ def inner_temperature(Tc,Pc,rho,m,epsilon,optable,convective=True):
         lnT = np.log(Tc) - np.power(np.pi/6,1/3) * (gradT_ad * np.power(rho,4/3))/Pc * np.power(m,2/3)
         T = np.exp(lnT)
     else:
-        optable.kappa(rho=rhoc,T=Tc)
-        T4 = np.power(Tc,4) - 1/(2*a*c) * np.power((3/(4*np.pi)),2/3) * optable.retrieve() * epsilon * np.power(rhoc,4/3) * np.power(m,2/3)
+        optable.kappa(rho=rho,T=Tc)
+        kappa = optable.retrieve()
+        T4 = np.power(Tc,4) - 1/(2*a*c) * np.power((3/(4*np.pi)),2/3) * kappa * epsilon * np.power(rho,4/3) * np.power(m,2/3)
         T = np.power(T4,1/4)
     return T
 
@@ -174,7 +179,7 @@ def outer_pressure_cost(P,R,T,M,mu,optable):
     rho = density(P=P,T=T,mu=mu)
     optable.kappa(T=T,rho=rho)
     Pout = outer_pressure(R=R,M=M,kappa=optable.retrieve())
-    return Pout - P
+    return np.abs(Pout - P)
     
 def outer_temperature(R,L):
     r"""Outer temperature at the boundary condition
@@ -189,7 +194,21 @@ def outer_temperature(R,L):
     from .constants import sigmab
     return np.power(L/(4*np.pi*np.power(R,2)*sigmab), 1/4)
     
-def find_pressure_guess(Pguess,T,mu,optable,increase=True):
+def get_pressure_guess(T,mu,optable):
+    """docstring for get_pressure_guess"""
+    from .constants import mh, kb, a
+    optable.bounds()
+    logRb,logTb = optable.retrieve()
+    logTg = np.array([np.log10(T),np.log10(T)])
+    pbounds = np.empty((2,2))
+    optable.invert_points(logR=logRb,logT=logTg)
+    logrho,logT = optable.retrieve().T
+    Pbound = np.power(10,logrho) / (mu * mh) * kb * T + (a/3) * np.power(T,4)
+    Tbound = np.power(10,logT)
+    return np.vstack((Pbound,Tbound))
+        
+    
+def find_pressure_guess(Pguess,T,mu,optable,incr=2):
     """Find a good initial pressure guess. Searches logarithmically, and checks to see if the guess is on the opacity table."""
     goodguess = False
     while not goodguess:
@@ -199,10 +218,7 @@ def find_pressure_guess(Pguess,T,mu,optable,increase=True):
         goodguess,code,string = optable.retrieve()
         if not goodguess and code != 2**2:
             raise ValueError(string + " T=%g" % T)
-        if increase:
-            Pguess *= 10
-        else:
-            Pguess *= 0.1
+        Pguess *= incr
     return Pguess
     
 # For conformity with the "Numerical Recipies" names:
