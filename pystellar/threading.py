@@ -43,7 +43,7 @@ import scipy as sp
 from pkg_resources import resource_filename
 from warnings import warn
 
-from multiprocessing import Queue, Process, Pool, Manager, Event, cpu_count, current_process
+from multiprocessing import Queue, Process, Pool, Manager, Event, Lock, cpu_count, current_process
 
 import logging
 # Alex's modules
@@ -70,11 +70,13 @@ class ThreadStateError(CodedError):
 
 class ObjectManager(object):
     """A thread management object for single object threads"""
-    def __init__(self,input_Q=None, output_Q=None, timeout=10, **kwargs):
+    def __init__(self,input_Q=None, output_Q=None, timeout=10,locking=False, **kwargs):
         super(ObjectManager, self).__init__(**kwargs)
         self.input = Queue() if input_Q is None else input_Q
         self.output = Queue() if output_Q is None else output_Q
         self._timeout = timeout
+        self._locking = locking
+        self._lock = Lock()
         self.hdr = {}
         self.hdr['pid'] = current_process().pid
     
@@ -83,7 +85,9 @@ class ObjectManager(object):
         
         def method(*args,**kwargs):
             """A threaded method"""
-            self.input.put((attr,args,kwargs),timeout=self._timeout)
+            if self._locking:
+                self._lock.acquire()
+            self.input.put((self.hdr,attr,args,kwargs),timeout=self._timeout)
             
         return method
     
@@ -91,6 +95,8 @@ class ObjectManager(object):
         """Retrieve a return value off the top of the output queue"""
         timeout = self._timeout if timeout is None else timeout
         hdr,func,args,kwargs,rvalue = self.output.get(timeout=timeout)
+        if self._locking:
+            self._lock.release()
         if inputs:
             return func,args,kwargs,rvalue,hdr
         else:
@@ -98,11 +104,8 @@ class ObjectManager(object):
         
     def clear(self):
         """Clear and join the queues"""
-        with self.output.mutex:
-            self.output.clear()
-        with self.input.mutex:
-            self.input.clear()
-
+        self.output.put(None)
+        self.input.put(None)
 
 class ObjectThread(ObjectManager,Process):
     """docstring for ObjectThread"""
@@ -116,7 +119,7 @@ class ObjectThread(ObjectManager,Process):
     
     def stop(self):
         """Send the thread stop signal."""
-        self.input.put((self.STOP,None,None),timeout=self._timeout)
+        self.input.put((self.hdr,self.STOP,None,None),timeout=self._timeout)
         self.clear()
         self.join()
     
@@ -144,7 +147,6 @@ class ObjectThread(ObjectManager,Process):
                 except Exception as e:
                     done = True
                     raise #ThreadStateError(msg=str(e),code=2**2,thread=self.pid)
-        
 
 class ObjectPassthrough(ObjectThread):
     """An object which simply perfoms the passthrough to a thread."""
