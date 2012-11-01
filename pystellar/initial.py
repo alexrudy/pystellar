@@ -56,7 +56,7 @@ import logging
 
 log = logging.getLogger(__name__)
 
-def load_inner(Pc,Tc,M,mu,m,optable,epsilon):
+def inner_boundary(Pc,Tc,M,mu,m,optable,epsilon):
     r"""Load our inner boundary conditions for our star.
     
     :param Pc: Central Pressure, :math:`P_c`
@@ -78,7 +78,7 @@ def load_inner(Pc,Tc,M,mu,m,optable,epsilon):
     T = inner_temperature(Tc=Tc,Pc=Pc,rho=rhoc,m=m,epsilon=epsilon,optable=optable)
     return (r,l,P,T)
     
-def load_outer(R,L,M,mu,optable,Pguess=10):
+def outer_boundary(R,L,M,mu,optable,Pguess=10):
     r"""Load the outer boundary conditions for our star.
     
     :param R: Stellar Radius
@@ -207,5 +207,5 @@ def find_pressure_guess(Pguess,T,mu,optable,increase=True):
     
 # For conformity with the "Numerical Recipies" names:
 
-load1 = load_inner
-load2 = load_outer
+load1 = inner_boundary
+load2 = outer_boundary

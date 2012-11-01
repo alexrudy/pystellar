@@ -11,7 +11,7 @@
 import numpy as np
 
 from astropysics.constants import Rs, Ms, Lsun
-from pystellar.initial import load_inner, load_outer
+from pystellar.initial import inner_boundary, outer_boundary
 from pystellar.density import mmw
 from pystellar.opacity import OpacityTable
 from pystellar.stellar import derivatives
@@ -37,7 +37,7 @@ print "Outer Boundary Conditions"
 print "    Inital Guess:"
 print "    R = %10.6e cm" % Rs
 print "    L = %10.6e erg/s" % Lsun
-(r,l,P,T) = load_outer(R=Rs,L=Lsun,M=Ms,mu=mmw(X=X,Y=Y),optable=Opacity)
+(r,l,P,T) = outer_boundary(R=Rs,L=Lsun,M=Ms,mu=mmw(X=X,Y=Y),optable=Opacity)
 print "At m=M:"
 print "    R = %10.6e cm" % r
 print "    L = %10.6e erg/s" % l
@@ -63,7 +63,7 @@ print "    P = %10.6e Dyne/cm^2" % Pc
 print "    T = %10.6e K" % Tc
 print "    Initial Step:"
 print "    m = %10.6e g" % m
-(r,l,P,T) = load_inner(Pc=Pc,Tc=Tc,M=Ms,mu=mmw(X=X,Y=Y),m=m,epsilon=epsilon,optable=Opacity)
+(r,l,P,T) = inner_boundary(Pc=Pc,Tc=Tc,M=Ms,mu=mmw(X=X,Y=Y),m=m,epsilon=epsilon,optable=Opacity)
 print "At M=m:"
 print "    R = %10.6e cm" % r
 print "    L = %10.6e erg/s" % l
