@@ -50,12 +50,13 @@ from __future__ import division
 import numpy as np
 
 from .density import density
+from .stellar import radiative_gradient
 
 import logging
 
 log = logging.getLogger(__name__)
 
-def load_inner(Pc,Tc,M,mu,m,epsilon):
+def load_inner(Pc,Tc,M,mu,m,optable,epsilon):
     r"""Load our inner boundary conditions for our star.
     
     :param Pc: Central Pressure, :math:`P_c`
@@ -71,9 +72,10 @@ def load_inner(Pc,Tc,M,mu,m,epsilon):
     """
     rhoc = density(P=Pc,T=Tc,mu=mu)
     r = inner_radius(rho=rhoc,m=m)
-    l = m * epsilon #TODO: I'm not sure about this!
+    l = m * epsilon
     P = inner_pressure(Pc=Pc,rho=rhoc,m=m)
-    T = inner_temperature(Tc=Tc,Pc=Pc,rho=rho,m=m)
+    optable.kappa(rho=rhoc,T=Tc)
+    T = inner_temperature(Tc=Tc,Pc=Pc,rho=rhoc,m=m,epsilon=epsilon,optable=optable)
     return (r,l,P,T)
     
 def load_outer(R,L,M,mu,optable,Pguess=10):
@@ -128,7 +130,7 @@ def inner_pressure(Pc,rho,m):
     from .constants import G
     return Pc-(3*G)/(8*np.pi) * np.power((4*np.pi)/3 * rho, 4/3) * np.power(m,2/3)
     
-def inner_temperature(Tc,Pc,rho,m,convective=True):
+def inner_temperature(Tc,Pc,rho,m,epsilon,optable,convective=True):
     r"""Inner temperature for the core.
     
     .. math::
@@ -143,11 +145,14 @@ def inner_temperature(Tc,Pc,rho,m,convective=True):
     :param bool convective: Whether the star should be convective or not.
     
     """
-    if not convective:
-        raise NotImplementedError("Cannot calculate radiative core stars right now.")
-    D_AD = 0.2 #Adiabatic Temperature Gradient
-    lnT = np.log(Tc) - np.power(np.pi/6,1/3) * (D_AD* np.power(rho,4/3))/Pc * np.power(m,2/3)
-    return np.exp(lnT)
+    from .constants import gradT_ad, a, c
+    if convective:
+        lnT = np.log(Tc) - np.power(np.pi/6,1/3) * (gradT_ad * np.power(rho,4/3))/Pc * np.power(m,2/3)
+        T = np.exp(lnT)
+    else:
+        T4 = np.power(Tc,4) - 1/(2*a*c) * np.power((3/(4*np.pi)),2/3) * optable.retrieve() * epsilon * np.power(rhoc,4/3) * np.power(m,2/3)
+        T = np.power(T4,1/4)
+    return T
 
 def outer_pressure(R,M,kappa):
     r"""Outer pressure at the boundary condition.

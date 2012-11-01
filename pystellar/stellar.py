@@ -14,6 +14,8 @@
 """
 from __future__ import division
 
+import numpy as np
+
 from .density import density
 
 def drdm(r,rho):
@@ -27,7 +29,7 @@ def drdm(r,rho):
     :param rho: Density
     
     """
-    return 1 / (4*np.pi*np.power(r,2),rho)
+    return 1 / (4*np.pi*np.power(r,2)*rho)
     
 def dPdm(r,m):
     ur"""Find the derivative of the pressure with respect to mass.
@@ -49,7 +51,7 @@ def dldm(epsilon):
     """
     return epsilon
 
-def dTdm(m,T,r,P,grad):
+def dTdm(m,r,l,P,T,rho,optable):
     ur"""Derivative of tempertature with respect to mass.
     
     .. math::
@@ -65,10 +67,22 @@ def dTdm(m,T,r,P,grad):
     .. todo::
         Figure out how this function should actually handle the temperature gradient
     """
-    from .constants import G
-    return -(G*m*T)/(4 * np.pi * np.power(r,4) * P)
     
-def derivatives(xs,ys,mu,epsilon,grad):
+    
+    from .constants import G, gradT_ad
+    rgrad = radiative_gradient(T=T,P=P,l=l,m=m,rho=rho,optable=optable)
+    grad = rgrad if rgrad > gradT_ad else gradT_ad # Schwartzchild criterion
+    return -(G*m*T)/(4 * np.pi * np.power(r,4) * P) * grad
+    
+def radiative_gradient(T,P,l,m,rho,optable):
+    """docstring for radiative_gradient"""
+    from .constants import G, c, a
+    k = optable.retrieve()    
+    return 3/(16*np.pi*a*c*G) * (k * l * P)/(m * np.power(T,4))
+    
+    
+    
+def derivatives(xs,ys,mu,epsilon,optable):
     """Return the full set of derivatives.
     
     :param xs: The mass positions, m, at which to find the derivative.
@@ -79,9 +93,10 @@ def derivatives(xs,ys,mu,epsilon,grad):
     r, l, P, T = np.asarray(ys).T
     m = np.asarray(xs)
     rho = density(P=P,T=T,mu=mu)
+    optable.kappa(rho=rho,T=T)
     dr = drdm(r=r,rho=rho)
     dl = dldm(epsilon)
     dP = dPdm(r=r,m=m)
-    dT = dTdm(m=m,T=T,r=r,P=P,grad=grad)
+    dT = dTdm(m=m,T=T,r=r,P=P,l=l,rho=rho,optable=optable)
     return np.hstack((dr,dl,dP,dT)).T
     
