@@ -97,8 +97,8 @@ def outer_boundary(R,L,M,mu,optable,Piter=False):
     l = L
     T = outer_temperature(R=R,L=L)
     if Piter:
-        Pguess1 = find_pressure_guess(Pguess=1e1,T=T,mu=mu,optable=optable)
-        Pguess2 = find_pressure_guess(Pguess=1e10,T=T,mu=mu,optable=optable,incr=0.5)
+        Pguess1 = find_pressure_guess(Pguess=1e1,T=T,mu=mu,optable=optable,incr=Piter)
+        Pguess2 = find_pressure_guess(Pguess=1e10,T=T,mu=mu,optable=optable,incr=1/Piter)
     else:
         Pbound, Tbound = get_pressure_guess(T=T,mu=mu,optable=optable)
         Pguess2, Pguess1 = Pbound
