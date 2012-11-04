@@ -97,6 +97,8 @@ def outer_boundary(R,L,M,mu,optable,Piter=False):
     l = L
     T = outer_temperature(R=R,L=L)
     if Piter:
+        if float(Piter) == 1.0:
+            raise ValueError, "Can't iterate with multiplicative changes of =1.0"
         Pguess1 = find_pressure_guess(Pguess=1e1,T=T,mu=mu,optable=optable,incr=Piter)
         Pguess2 = find_pressure_guess(Pguess=1e10,T=T,mu=mu,optable=optable,incr=1/Piter)
     else:
@@ -131,7 +133,8 @@ def inner_pressure(Pc,rho,m):
     :param m: Initial mass step from center of star.
     """
     from .constants import G
-    return Pc - ((3*G)/(8*np.pi) * np.power((4*np.pi)/3 * rho, 4/3) * np.power(m,2/3))
+    Pdelt = ((3*G)/(8*np.pi) * np.power((4*np.pi)/3 * rho, 4/3) * np.power(m,2/3))
+    return Pc - Pdelt
     
 def inner_temperature(Tc,Pc,rho,m,epsilon,optable,convective=True):
     r"""Inner temperature for the core.
