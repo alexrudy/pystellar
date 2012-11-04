@@ -7,6 +7,9 @@
 #  Created by Alexander Rudy on 2012-10-29.
 #  Copyright 2012 Alexander Rudy. All rights reserved.
 # 
+import sys
+import codecs
+sys.stdout = codecs.getwriter('utf8')(sys.stdout)
 
 import time
 
@@ -23,6 +26,8 @@ print "Stellar Structure Problem Set #2"
 X = 0.700
 Y = 0.280
 epsilon = 100
+# P_Guess_Iteration = 2
+P_Guess_Iteration = 0
 Opacity = ObjectThread(OpacityTable,ikwargs=dict(fkey='GN93hz',X=X,Y=Y),locking=True)
 Opacity.start()
 
@@ -41,7 +46,7 @@ print "Outer Boundary Conditions"
 print "    Inital Guess:"
 print "    R = %10.6e cm" % Rs
 print "    L = %10.6e erg/s" % Lsun
-r,l,P,T = outer_boundary(R=Rs,L=Lsun,M=Ms,mu=mmw(X=X,Y=Y),optable=Opacity,Piter=True)
+r,l,P,T = outer_boundary(R=Rs,L=Lsun,M=Ms,mu=mmw(X=X,Y=Y),optable=Opacity,Piter=P_Guess_Iteration)
 print "At m=M:"
 print "    r = %10.6e cm" % r
 print "    l = %10.6e erg/s" % l
