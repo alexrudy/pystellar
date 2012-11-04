@@ -43,13 +43,13 @@ def dPdm(r,m):
     from .constants import G
     return (- G * m) / (4*np.pi*np.power(r,2))
     
-def dldm(epsilon):
+def dldm(l,epsilon):
     ur"""Find the derivative of luminosity with respect to mass.
     
     .. todo::
         This function is entirely dependent on the total energy generation rate, a quantity we haven't explored yet at all. As such, this function really does nothing!
     """
-    return epsilon
+    return np.ones(l.shape) * epsilon
 
 def dTdm(m,r,l,P,T,rho,optable):
     ur"""Derivative of tempertature with respect to mass.
@@ -70,7 +70,9 @@ def dTdm(m,r,l,P,T,rho,optable):
     
     from .constants import G, gradT_ad
     rgrad = radiative_gradient(T=T,P=P,l=l,m=m,rho=rho,optable=optable)
-    grad = rgrad if rgrad < gradT_ad else gradT_ad # Schwartzchild criterion
+    grad = np.zeros(rgrad.shape)
+    grad[:] = rgrad # Schwartzchild criterion
+    grad[rgrad > gradT_ad] = gradT_ad
     return -(G*m*T)/(4 * np.pi * np.power(r,4) * P) * grad
     
 def radiative_gradient(T,P,l,m,rho,optable):
@@ -94,8 +96,8 @@ def derivatives(xs,ys,mu,epsilon,optable):
     rho = density(P=P,T=T,mu=mu)
     optable.kappa(rho=rho,T=T)
     dr = drdm(r=r,rho=rho)
-    dl = dldm(epsilon)
+    dl = dldm(l=l,epsilon=epsilon)
     dP = dPdm(r=r,m=m)
     dT = dTdm(m=m,T=T,r=r,P=P,l=l,rho=rho,optable=optable)
-    return np.hstack((dr,dl,dP,dT)).T
+    return np.vstack((dr,dl,dP,dT))
     
