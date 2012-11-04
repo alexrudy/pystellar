@@ -87,9 +87,6 @@ def outer_boundary(R,L,M,mu,optable,Piter=False):
     :param function opfunc: A function which takes :math:`\log(T)` and :math:`\log(\rho)` and returns the rosseland mean opacity, :math:`\bar{\kappa}`
     :returns: Tuple of `(r,l,P,T)`, the four equation of state values at point m.
     
-    .. todo::
-        Fix recursive dependency between opacity and pressure for initial conditions. Maybe provide an initial rosseland mean opacity?
-    
     """
     from scipy.optimize import fminbound
     
@@ -178,7 +175,11 @@ def outer_pressure(R,M,kappa):
     return (G * M)/np.power(R,2) * 2/3 * 1/kappa
     
 def outer_pressure_cost(P,R,T,M,mu,optable):
-    """Outer pressure cost function for the boundary condition."""
+    """Outer pressure cost function for the boundary condition.
+    
+    This function returns the difference between the pressure guessed and the pressure then calculated from the outer pressure equation implemented in :meth:`outer_pressure`
+    
+    """
     rho = density(P=P,T=T,mu=mu)
     optable.kappa(T=T,rho=rho)
     Pout = outer_pressure(R=R,M=M,kappa=optable.retrieve())
@@ -198,7 +199,10 @@ def outer_temperature(R,L):
     return np.power(L/(4*np.pi*np.power(R,2)*sigmab), 1/4)
     
 def get_pressure_guess(T,mu,optable):
-    """docstring for get_pressure_guess"""
+    """Return an analytic estimate of the pressure boundary guesses, without iteration.
+    
+    This is imperfect, as it uses the corners of the table. The table isn't square, so it is still possible, for some choices of T and R that the requested opacity is off the charts.
+    """
     from .constants import mh, kb, a
     optable.bounds()
     logRb,logTb = optable.retrieve()
