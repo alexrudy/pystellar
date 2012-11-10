@@ -27,4 +27,7 @@ setup(
     test_suite = 'tests',
     author = 'Alexander Rudy',
     author_email = 'dev@alexrudy.org',
+    entry_points = {
+        'console_scripts' : ["PyStar = pystellar.controller:StarEngine.script"]
+    }
 )
