@@ -70,13 +70,16 @@ class ThreadStateError(CodedError):
 
 class ObjectManager(object):
     """A thread management object for single object threads"""
-    def __init__(self,input_Q=None, output_Q=None, timeout=10,locking=False, **kwargs):
+    def __init__(self,input_Q=None, output_Q=None, timeout=10, locking=False, lock=None, **kwargs):
         super(ObjectManager, self).__init__(**kwargs)
         self.input = Queue() if input_Q is None else input_Q
         self.output = Queue() if output_Q is None else output_Q
         self._timeout = timeout
         self._locking = locking
-        self._lock = Lock()
+        if lock is None:
+            self._lock = Lock()
+        else:
+            self._lock = lock
         self.hdr = {}
         self.hdr['pid'] = current_process().pid
     
@@ -90,6 +93,17 @@ class ObjectManager(object):
             self.input.put((self.hdr,attr,args,kwargs),timeout=self._timeout)
             
         return method
+    
+    @property
+    def duplicator(self):
+        """Arguments required to duplicate this manager"""
+        return {
+            "input_Q" : self.input,
+            "output_Q": self.output,
+            "timeout" : self._timeout,
+            "locking" : self.locking,
+            "lock" : self._lock
+        }
     
     def retrieve(self,inputs=False,timeout=None):
         """Retrieve a return value off the top of the output queue"""
@@ -110,6 +124,7 @@ class ObjectManager(object):
 class ObjectThread(ObjectManager,Process):
     """docstring for ObjectThread"""
     def __init__(self, Oclass, iargs=(), ikwargs={},**kwargs):
+        kwargs.setdefault("name",Oclass.__name__)
         super(ObjectThread, self).__init__(**kwargs)
         self.Oclass = Oclass
         self._args = iargs
