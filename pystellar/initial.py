@@ -56,7 +56,7 @@ import logging
 
 log = logging.getLogger(__name__)
 
-def inner_boundary(Pc,Tc,M,mu,m,optable,epsilon):
+def inner_boundary(Pc,Tc,M,mu,m,optable,epsilon,convective=True):
     r"""Load our inner boundary conditions for our star.
     
     :param Pc: Central Pressure, :math:`P_c`
@@ -74,7 +74,7 @@ def inner_boundary(Pc,Tc,M,mu,m,optable,epsilon):
     r = inner_radius(rho=rhoc,m=m)
     l = m * epsilon
     P = inner_pressure(Pc=Pc,rho=rhoc,m=m)
-    T = inner_temperature(Tc=Tc,Pc=Pc,rho=rhoc,m=m,epsilon=epsilon,optable=optable,convective=True)
+    T = inner_temperature(Tc=Tc,Pc=Pc,rho=rhoc,m=m,epsilon=epsilon,optable=optable,convective=convective)
     return (r,l,P,T)
     
 def outer_boundary(R,L,M,mu,optable,Piter=False):
