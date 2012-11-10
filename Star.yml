@@ -1,0 +1,17 @@
+Star:
+  Initial:
+    Ls: 1.0 #units of solar luminosity
+    Rs: 1.0 #units of solar radius
+    Pc: 2.477e17
+    Tc: 1.571e7
+    dm: 1.0e-20
+  Composition:
+    X: 0.70
+    Y: 0.28
+    dXc: 0.0
+    dXo: 0.0
+  Properties:
+    M: 1.0 #units of solar mass
+Data:
+  Opacity:
+    Config: GN93hz
