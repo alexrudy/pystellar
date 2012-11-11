@@ -179,6 +179,10 @@ def read_table_opal(fkey,cfg):
 class OpacityTableError(CodedError):
     """Error raised due to a poor configuration of the opacity table."""
     
+    def __init__(self,*args,**kwargs):
+        """Initialization pass-through"""
+        super(OpacityTableError, self).__init__(*args, **kwargs)
+        log.error(str(self))
     
     codes = {
         2**0 : "Unkown Error!",
@@ -209,16 +213,23 @@ class OpacityTable(object):
     
       
     """
-    def __init__(self, fkey,load=True, filename="OPAL.yml", X=None, Y=None, snap=False):
+    def __init__(self, fkey,load=True, filename="OPAL.yml", X=None, Y=None, snap=False, error=True):
         super(OpacityTable, self).__init__()
         
         # Initialize our attribute values
+        
+        # Compositional Values
         self._X = None
         self._Y = None
         self._dXc = None
         self._dXo = None
-        self._interpolator = None
-        self._snap = snap
+        
+        self._interpolator = None # Object for the interpolator
+        self._snap = snap   # Snap out-of-bounds objects to the grid.
+        self._error = error # Use python errors, or return np.nan
+        
+        # Logging Values:
+        self.log = logging.getLogger(__name__)
         
         # Set up the configuration
         self.fkey = fkey
@@ -227,7 +238,7 @@ class OpacityTable(object):
         self.cfg.dn = DottedConfiguration
         
         # Load the tables (from cached .npy files if appropriate)
-        log.info("Loading Tables...")
+        self.log.debug("Loading Tables...")
         if load:
             try:
                 self.load()
@@ -236,13 +247,13 @@ class OpacityTable(object):
                 self.save()
         else:
             self.read()
-        log.info("Tables Loaded: %s",repr(self._tbls.shape))
+        self.log.debug("Tables Loaded: %s",repr(self._tbls.shape))
         
         # Make ourselves a nearest-neighbor composition interpolator
         self._composition_interpolator()
-        log.info("Opacity Interpolator Initialzied")
+        self.log.info("Opacity Interpolator Initialzied")
         
-        # If we 
+        # If we have a composition, we should use it.
         if X is not None and Y is not None:
             self.composition(X,Y)
         
@@ -251,8 +262,8 @@ class OpacityTable(object):
         from scipy.interpolate import NearestNDInterpolator
         points = self._comp[:,:4]
         values = self._comp[:,4]
-        log.info("Interpolating in %d dimensions on %d points" % (points.shape[1],points.shape[0]))
-        log.debug("Input Shapes: [x,y]=%r, [v]=%r" % (repr(points.shape), repr(values.shape)))
+        self.log.info("Composition Interpolating in %d dimensions on %d points" % (points.shape[1],points.shape[0]))
+        self.log.debug("Input Shapes: [x,y]=%r, [v]=%r" % (repr(points.shape), repr(values.shape)))
         nans = (np.sum(np.isnan(points)), np.sum(np.isnan(values)))
         if nans[0] > 0 or nans[1] > 0:
             log.debug("Input NaNs: [x,y]=%g, [v]=%g" % nans)
@@ -261,35 +272,38 @@ class OpacityTable(object):
     def _temperature_density_interpolator(self):
         """Creates the temperature-density interpolator"""
         from scipy.interpolate import LinearNDInterpolator
-        log.info("Initializing Interpolator...")
+        self.log.debug("Initializing Main Interpolator...")
         points = self._tbls[self.n,:,:2]
         values = self._tbls[self.n,:,2]
         points = points[np.isfinite(values)]
         values = values[np.isfinite(values)]
-        log.info("Interpolating in %d dimensions on %d points" % (points.shape[1],points.shape[0]))
-        log.debug(u"Input Shapes: [logR,logT]=%r, [κ]=%r" % (repr(points.shape), repr(values.shape)))
+        self.log.info("Interpolating Opacity in %d dimensions on %d points" % (points.shape[1],points.shape[0]))
+        self.log.debug(u"Input Shapes: [logR,logT]=%r, [κ]=%r" % (repr(points.shape), repr(values.shape)))
         
         nans = (np.sum(np.isnan(points)), np.sum(np.isnan(values)))
         if nans[0] > 0 or nans[1] > 0:
             log.debug(u"Input NaNs: [logR,logT]=%g, [κ]=%g" % nans)
         self._interpolator = LinearNDInterpolator(points,values)
-        log.info("Created Interpolator")
+        self.log.debug("Created Opacity Interpolator")
         
     def read(self):
         """Read the opacity tables from an OPAL file."""
         self._comp, self._tbls = read_table_opal(self.fkey,cfg=self.cfg)
+        self.log.debug("Read Opacity Tables from %(filename)s" % self.cfg[self.fkey])
         
     def load(self):
         """Load the interpolator values from a pair of files. Will load from two numpy files the composition table and the opacity tables."""
         c = self.cfg[self.fkey]
         self._comp = np.load("%s.comp.npy" % c["filename"])
         self._tbls = np.load("%s.tbls.npy" % c["filename"])
+        self.log.debug("Loaded Opacity Tables from Numpy Files: %(filename)s.*.npy" % self.cfg[self.fkey])
         
     def save(self):
         """Save this interpolator to a numpy file. The composition and tables will be saved to separate tables."""
         c = self.cfg[self.fkey]
         np.save("%s.comp.npy" % c["filename"],self._comp)
         np.save("%s.tbls.npy" % c["filename"],self._tbls)
+        self.log.debug("Saved Opacity Tables to Numpy Files: %(filename)s.*.npy" % self.cfg[self.fkey])
         
     @property
     def X(self):
@@ -347,7 +361,7 @@ class OpacityTable(object):
         """
         assert X + Y + dXc + dXo <= 1.0, u"Composition must be less than or equal to 1.0! ∑X=%0.1f" % (X + Y + dXc + dXo)
         if X == self.X and Y == self.Y and dXc == self.dXc and dXo == self.dXo:
-            log.debug("Values are unchanged")
+            self.log.debug("Values are unchanged")
             return
         point = np.atleast_2d(np.array([X,Y,dXc,dXo]))
         self._n = self._table_number(point)[0]
@@ -356,7 +370,7 @@ class OpacityTable(object):
         self._dXc = self._comp[self.n,2]
         self._dXo = self._comp[self.n,3]
         if X != self.X or Y != self.Y or dXc != self.dXc or dXo != self.dXo:
-            log.warning("Interoplation reached a nearby value, not exact requested composition: X=%.4f, Y=%.4f, dXc=%.4f, dXo=%.4f" % (self.X, self.Y, self.dXc, self.dXo))
+            self.log.warning("Interoplation reached a nearby value, not exact requested composition: X=%.4f, Y=%.4f, dXc=%.4f, dXo=%.4f" % (self.X, self.Y, self.dXc, self.dXo))
         
         self._temperature_density_interpolator()
         
@@ -490,10 +504,10 @@ class OpacityTable(object):
         
         if self._snap:
             points = self.snap(points)
-        else:
+        elif self._error:
             self.__valid__(points)
         kappa = self._interpolator(points)
-        if np.isnan(kappa).any():
+        if np.isnan(kappa).any() and self._error:
             raise ValueError("BOUNDS: Interpolator returned NaN")
         return kappa
         
