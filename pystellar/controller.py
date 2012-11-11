@@ -67,8 +67,8 @@ class StarEngine(CLIEngine):
         
         self.log.info("Calling Center-Integration")
         self._stars["inner_1"].center()
-        # self.log.info("Calling Outer-Integration")
-        # self._stars["outer_1"].surface()
+        self.log.info("Calling Outer-Integration")
+        self._stars["outer_1"].surface()
         
     def end(self):
         """docstring for end"""
@@ -95,11 +95,11 @@ class StarEngine(CLIEngine):
             ax4.set_xlabel("Mass")
             ax4.set_ylabel("Temperature")
             plt.show()
-            # ys, ms, data  = self._stars["outer_1"].retrieve()
-            # ax1.loglog(ms,ys[:,0],".-")
-            #             ax2.loglog(ms,ys[:,1],".-")
-            #             ax3.loglog(ms,ys[:,2],".-")
-            #             ax4.loglog(ms,ys[:,3],".-")
+            ys, ms, data  = self._stars["outer_1"].retrieve()
+            ax1.loglog(ms,ys[:,0],".-")
+            ax2.loglog(ms,ys[:,1],".-")
+            ax3.loglog(ms,ys[:,2],".-")
+            ax4.loglog(ms,ys[:,3],".-")
         for star in self._stars.values():
             star.stop()
         

@@ -179,8 +179,6 @@ def read_table_opal(fkey,cfg):
 class OpacityTableError(CodedError):
     """Error raised due to a poor configuration of the opacity table."""
     
-    def __init__(self,**kwargs):
-        self.kwds = kwargs
     
     codes = {
         2**0 : "Unkown Error!",
@@ -197,6 +195,10 @@ class OpacityTableError(CodedError):
         if self.msg is None and self.code in self.codes:
             self.msg = self.codes[self.code]
         return super(OpacityTableError, self).__str__()
+        
+    def __repr__(self):
+        """docstring for __repr__"""
+        return "<" + str(self) + ">"
         
 
 class OpacityTable(object):

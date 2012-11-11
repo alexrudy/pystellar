@@ -51,12 +51,13 @@ import numpy as np
 
 from .density import density
 from .stellar import radiative_gradient
+from .energy import epp, eCNO
 
 import logging
 
 log = logging.getLogger(__name__)
 
-def inner_boundary(Pc,Tc,M,mu,m,optable,epsilon,convective=True):
+def inner_boundary(Pc,Tc,M,mu,m,optable,X,XCNO,cfg,convective=True):
     r"""Load our inner boundary conditions for our star.
     
     :param Pc: Central Pressure, :math:`P_c`
@@ -71,6 +72,7 @@ def inner_boundary(Pc,Tc,M,mu,m,optable,epsilon,convective=True):
     
     """
     rhoc = density(P=Pc,T=Tc,mu=mu)
+    epsilon = (epp(T=Tc,rho=rhoc,X=X,c=cfg) + eCNO(T=Tc,rho=rhoc,X=X,XCNO=XCNO,c=cfg))
     r = inner_radius(rho=rhoc,m=m)
     l = m * epsilon
     P = inner_pressure(Pc=Pc,rho=rhoc,m=m)

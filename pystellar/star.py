@@ -35,7 +35,7 @@ class Star(object):
         self.log.debug("Optable Args: %r" % optable_args)
         if optable_args is None:
             self.log.debug("Starting Opacity Table from Scratch")
-            self._opacity = ObjectThread(OpacityTable,ikwargs=dict(fkey=self._config["Data.Opacity.Config"],X=self.X,Y=self.Y,snap=True),locking=True,timeout=None)
+            self._opacity = ObjectThread(OpacityTable,ikwargs=dict(fkey=self._config["Data.Opacity.Config"],X=self.X,Y=self.Y,snap=self._config["System.Opacity.Snap"]),locking=True,timeout=None)
             self.opacity.start()
             self.log.debug("Started Opacity Table From Scratch")
         else:
@@ -49,8 +49,7 @@ class Star(object):
         self.R_Guess = float(self._config["Star.Initial.Rs"]) * Rs
         self.L_Guess = float(self._config["Star.Initial.Ls"]) * Lsun
         self.dm_Guess = float(self._config["Star.Initial.dm"]) * Ms
-        self.dummy_epsilon = 100
-        self.fp = 1e18
+        self.fp = float(self._config["Star.Integration.fp"]) * self.M
         
     def set_fitting_point(self,point):
         """Set a new fitting point for this routine"""
@@ -75,13 +74,13 @@ class Star(object):
         
     def integral(self,y,x):
         """docstring for integral"""
-        return derivatives(xs=x,ys=y,mu=self.mu,epsilon=self.dummy_epsilon,optable=self.opacity)[0,:]
+        return derivatives(xs=x,ys=y,mu=self.mu,optable=self.opacity,X=self.X,XCNO=self.Z,cfg=self.config["Data.Energy"])[0,:]
         
     def center(self):
         """Run an integration from the central point to the outer edge."""
         import scipy.integrate
         self.log.debug("Getting Inner Boundaries")
-        center_ic = inner_boundary(Pc=self.Pc_Guess,Tc=self.Tc_Guess,M=self.M,mu=self.mu,m=self.dm_Guess,optable=self.opacity,epsilon=self.dummy_epsilon)
+        center_ic = inner_boundary(Pc=self.Pc_Guess,Tc=self.Tc_Guess,M=self.M,mu=self.mu,m=self.dm_Guess,optable=self.opacity,X=self.X,XCNO=self.Z,cfg=self.config["Data.Energy"])
         ms = np.logspace(np.log10(self.dm_Guess),np.log10(self.fp),500)
         self.log.debug("Starting Integration")
         ys, data = scipy.integrate.odeint(self.integral,center_ic,ms,full_output=True)
@@ -93,7 +92,7 @@ class Star(object):
         import scipy.integrate
         self.log.debug("Getting Outer Boundaries")
         outer_ic = outer_boundary(R=self.R_Guess,L=self.L_Guess,M=self.M,mu=self.mu,optable=self.opacity)
-        ms = np.logspace(31,np.log10(self.M-1e28),5)[::-1]
+        ms = np.logspace(31,np.log10(self.M),5)[::-1]
         self.log.debug("Starting Integration")
         ys, data = scipy.integrate.odeint(self.integral,outer_ic,ms,full_output=True)
         self.log.debug("Finished Integration")
