@@ -12,6 +12,27 @@ Star:
     dXo: 0.0
   Properties:
     M: 1.0 #units of solar mass
+  Integration:
+    fp: 1e-17
 Data:
   Opacity:
     Config: GN93hz
+  Energy:
+    g11:
+      A: 0.0123
+      B: 0.0109
+      C: 0.0009
+    epp:
+      B: 3.380e1
+      A: 2.38e6
+      f11: 1.0
+    g141:
+      A: 0.0027
+      B: 0.00778
+      C: 0.000149
+    eCNO:
+      A: 8.67e27
+      B: 152.28
+System:
+  Opacity:
+    Snap: True
