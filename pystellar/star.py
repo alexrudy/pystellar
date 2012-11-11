@@ -21,27 +21,37 @@ from pystellar.threading import ObjectThread, ObjectManager
 
 from pystellar.initial import inner_boundary, outer_boundary
 from pystellar.stellar import derivatives
-from pystellar.density import mmw
+from pystellar.density import mmw, density
+from .integrator import integrate
 
 class Star(object):
     """A simple configured star object."""
-    def __init__(self, filename="Star.yml", optable_args=None):
+    def __init__(self, filename="Star.yml", optable_args=None, dashboard_args=None):
         super(Star, self).__init__()
         self.log = logging.getLogger(__name__)
+        self._scipy = True
+        self._call_count = 0
         self._filename = filename
+        
         self._config = DottedConfiguration()
         self._config.load(self._filename)
         self._config.dn = DottedConfiguration
-        self.log.debug("Optable Args: %r" % optable_args)
+        
         if optable_args is None:
             self.log.debug("Starting Opacity Table from Scratch")
-            self._opacity = ObjectThread(OpacityTable,ikwargs=dict(fkey=self._config["Data.Opacity.Config"],X=self.X,Y=self.Y,snap=self._config["System.Opacity.Snap"]),locking=True,timeout=None)
+            self._opacity = ObjectThread(OpacityTable,
+                ikwargs=dict(fkey=self._config["Data.Opacity.Config"],X=self.X,Y=self.Y,
+                    snap=self._config["System.Opacity.Snap"],error=self._config["System.Opacity.Error"]),
+                locking=True,timeout=self._config["System.Opacity.Timeout"])
             self.opacity.start()
             self.log.debug("Started Opacity Table From Scratch")
         else:
             self.log.debug("Starting Opacity Table from Arguments")
             self._opacity = ObjectManager(**optable_args)
             self.log.debug("Started Opacity Table from Arguments")
+        
+        if dashboard_args is not None:
+            self._dashboard = ObjectManager(**dashboard_args)
         
         from astropysics.constants import Rs, Lsun, Ms
         self.Pc_Guess = float(self._config["Star.Initial.Pc"])
@@ -50,6 +60,16 @@ class Star(object):
         self.L_Guess = float(self._config["Star.Initial.Ls"]) * Lsun
         self.dm_Guess = float(self._config["Star.Initial.dm"]) * Ms
         self.fp = float(self._config["Star.Integration.fp"]) * self.M
+        
+        self._update_frequency = self._config["System.Dashboard.Update"]
+        
+    def use_scipy(self):
+        """Toggle Scipy On"""
+        self._scipy = True
+        
+    def use_pystellar(self):
+        """Toggle Scipy Integrator Off"""
+        self._scipy = False
         
     def set_fitting_point(self,point):
         """Set a new fitting point for this routine"""
@@ -72,31 +92,75 @@ class Star(object):
         if isinstance(self._opacity,Process):
             self._opacity.stop()
         
-    def integral(self,y,x):
+    def integral(self,y,x,i):
         """docstring for integral"""
-        return derivatives(xs=x,ys=y,mu=self.mu,optable=self.opacity,X=self.X,XCNO=self.Z,cfg=self.config["Data.Energy"])[0,:]
+        x = np.asarray(x)
+        y = np.asarray(y)
+        self._call_count += 1            
+        dy = derivatives(xs=x,ys=y,mu=self.mu,optable=self.opacity,X=self.X,XCNO=self.Z,cfg=self.config["Data.Energy"])[:,0]
+        if (y < 0).any():
+            self.log.warning("%s: Negative Values Encountered: \n%r, \n%r, \n%r" % (i,x,y,dy))
+        else:
+            self.log.debug("%s: Derivs: %r, %r, %r" % (i,x,y,dy))
+        if self._call_count % self._update_frequency == 0:
+            self.dashboard.add_lines(x,y,i)
+            rho = density(P=y[2],T=y[3],mu=self.mu)
+            self.dashboard.add_density(x,rho,i)
+            self.log.info("%d Calls to Integrator (x= %g)" % (self._call_count,x))
+            self.dashboard.update()
+        
+        return dy
+        
+        
         
     def center(self):
-        """Run an integration from the central point to the outer edge."""
-        import scipy.integrate
+        """Run the center integration."""
         self.log.debug("Getting Inner Boundaries")
-        center_ic = inner_boundary(Pc=self.Pc_Guess,Tc=self.Tc_Guess,M=self.M,mu=self.mu,m=self.dm_Guess,optable=self.opacity,X=self.X,XCNO=self.Z,cfg=self.config["Data.Energy"])
-        ms = np.logspace(np.log10(self.dm_Guess),np.log10(self.fp),500)
-        self.log.debug("Starting Integration")
-        ys, data = scipy.integrate.odeint(self.integral,center_ic,ms,full_output=True)
-        self.log.debug("Finished Integration")
-        return ys, ms, data
+        center_ic = inner_boundary(
+            Pc=self.Pc_Guess,Tc=self.Tc_Guess,M=self.M,mu=self.mu,m=self.dm_Guess,
+            optable=self.opacity,X=self.X,XCNO=self.Z,cfg=self.config["Data.Energy"])
+        ms = np.logspace(np.log10(self.dm_Guess),np.log10(self.fp),self._config["System.Outputs.Size"])
+        self.log.debug("Starting Inner Integration")
+        if self._scipy:
+            return self.scipy(ms,center_ic,"Inner")
+        else:
+            return self.pystellar(ms,center_ic,"Inner")
         
     def surface(self):
         """Run an integration from the surface to the inner edge"""
-        import scipy.integrate
         self.log.debug("Getting Outer Boundaries")
         outer_ic = outer_boundary(R=self.R_Guess,L=self.L_Guess,M=self.M,mu=self.mu,optable=self.opacity)
-        ms = np.logspace(31,np.log10(self.M),5)[::-1]
-        self.log.debug("Starting Integration")
-        ys, data = scipy.integrate.odeint(self.integral,outer_ic,ms,full_output=True)
-        self.log.debug("Finished Integration")
-        return ys, ms, data
+        ms = np.logspace(np.log10(self.fp),np.log10(self.M),self._config["System.Outputs.Size"])[::-1]
+        self.log.debug("Starting Outer Integration")
+        if self._scipy:
+            return self.scipy(ms,outer_ic,"Outer")
+        else:
+            return self.pystellar(ms,outer_ic,"Outer")
+    
+    def pystellar(self,xs,ics,integrator):
+        """Run an integration from the central point to the outer edge."""
+        xs,ys,xc,yc = integrate(self.integral_xy,ss,ics,h0=1,tol=1e-16,args=(integrator,))
+        self.log.debug("Finished %s Integration" % integrator)
+        return ys, xs, None
+        
+    def scipy(self,xs,ics,integrator):
+        """Run an integration from the central point to the outer edge."""
+        self.log.debug("Calling %s Scipy Integration" % integrator)
+        import scipy.integrate
+        ys, data = scipy.integrate.odeint(self.integral,ics,xs,args=(integrator,),full_output=True,**self.config["System.Integrator.Scipy"][integrator]["Arguments"])
+        self.log.debug("Finished %s Integration" % integrator)
+        self.dashboard.insert_data(xs,ys,integrator)
+        rho = density(P=ys[:,2],T=ys[:,3],mu=self.mu)
+        self.dashboard.add_density(xs,rho,integrator)
+        self.log.debug("Plotted %s Integration" % integrator)
+        return ys, xs, data
+    
+    
+    @property
+    def dashboard(self):
+        """Dashboard Thread"""
+        return self._dashboard
+    
     
     @property
     def opacity(self):

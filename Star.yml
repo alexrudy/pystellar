@@ -4,7 +4,7 @@ Star:
     Rs: 1.0 #units of solar radius
     Pc: 2.477e17
     Tc: 1.571e7
-    dm: 1.0e-20
+    dm: 1.0e-9
   Composition:
     X: 0.70
     Y: 0.28
@@ -13,7 +13,7 @@ Star:
   Properties:
     M: 1.0 #units of solar mass
   Integration:
-    fp: 1e-17
+    fp: 1.0e-6
 Data:
   Opacity:
     Config: GN93hz
@@ -36,3 +36,27 @@ Data:
 System:
   Opacity:
     Snap: True
+    Error: False
+    Timeout: 130
+  Threading:
+    Timeout: 130
+  Outputs:
+    Size: 500
+  Dashboard:
+    Update: 1000
+  Integrator:
+    Scipy:
+      Inner:
+        Arguments:
+          mxstep: 100000
+          h0: !!float 1.0e15
+          hmin: !!float 1.0e10
+          hmax: !!float 1.0e23
+      Outer:
+        Arguments:
+          mxstep: 100000
+          h0: !!float -1.0e25
+          hmax: !!float 1.0e28
+          hmin: !!float 1.0e10
+          rtol: !!float 1.0e-12
+          atol: !!float 1.0e-20

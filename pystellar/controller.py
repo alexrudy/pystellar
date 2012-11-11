@@ -7,10 +7,13 @@
 #  Copyright 2012 Jaberwocky. All rights reserved.
 # 
 
-from pystellar.threading import ObjectThread
-from pystellar.star import Star
+from .threading import ObjectThread
+from .star import Star
+from .dashboard import Dashboard
 
 import logging
+
+import numpy as np
 
 from pyshell.base import CLIEngine
 from textwrap import fill
@@ -23,6 +26,8 @@ class StarEngine(CLIEngine):
     
     module = __name__
     
+    _star_threads = ["inner_1","outer_1"]
+    
     @property
     def description(self):
         """Text description of the star engine."""
@@ -30,7 +35,7 @@ class StarEngine(CLIEngine):
     
     def __init__(self):
         super(StarEngine, self).__init__()
-        self._stars = {}
+        self._threads = {}
         self.log = logging.getLogger(__name__)
         self.__setup_main_log()
         
@@ -40,72 +45,76 @@ class StarEngine(CLIEngine):
         self._stream = logging.StreamHandler()
         self._stream.setFormatter(logging.Formatter(fmt="--> %(message)s"))
         self._main_log.addHandler(self._stream)
-        self._main_log.setLevel(logging.DEBUG)
+        self._main_log.setLevel(logging.INFO)
         
     def parse(self):
         """docstring for parse"""
         self._parser.add_argument('--single', action='store_true',
             dest='single', help="Perform only a single integration")
+        self._parser.add_argument('--outer', action='store_true',
+            dest='outer_s', help="Perform only an outer single integration")
+        self._parser.add_argument('--inner', action='store_true',
+            dest='inner_s', help="Perform only an inner single integration")
+        self._parser.add_argument('--no-scipy', action='store_false', 
+            dest='scipy', help="Use the custom integrator, not the scipy integrator.")
         super(StarEngine, self).parse()
         
     def start(self):
         """Start the engine!"""
-        self._stars["master"] = Star(filename=self._opts.config)
-        if self._opts.single:
+        self._threads["master"] = Star(filename=self._opts.config)
+        self._threads["opacity"] = self._threads["master"].opacity
+        self._threads["dashboard"] = ObjectThread(Dashboard,timeout=self.config["System.Threading.Timeout"],locking=False)
+        self._threads["dashboard"].start()
+        self._threads["dashboard"].create_dashboard()
+        self._threads["dashboard"].update()
+        self.star_threads()
+        if self._opts.single or self._opts.inner_s or self._opts.outer_s:
             self.run_single()
         
+    def star_threads(self):
+        """Launch the star threads"""
+        optable_args = self._threads["opacity"].duplicator
+        dashboard_args = self._threads["dashboard"].duplicator
+        for star in self._star_threads:
+            self._threads[star] = ObjectThread(Star,
+                ikwargs=dict(filename=self._opts.config,optable_args=optable_args,dashboard_args=dashboard_args),
+                timeout=self.config["System.Threading.Timeout"],locking=True)
+            self._threads[star].start()
         
+        for star in self._star_threads:
+            if self._opts.scipy:
+                self._threads[star].use_scipy()
+            else:
+                self._threads[star].use_pystellar()
+            self._threads[star].release()
     
     def run_single(self):
-        """docstring for run_single"""
+        """Operate a Single Integrator"""
         self.log.info("Starting Single Integration")
-        optable_args = self._stars["master"].opacity.duplicator
-        self._stars["inner_1"] = ObjectThread(Star,ikwargs=dict(filename=self._opts.config,optable_args=optable_args),timeout=120)
-        self._stars["inner_1"].start()
-        self._stars["outer_1"] = ObjectThread(Star,ikwargs=dict(filename=self._opts.config,optable_args=optable_args),timeout=120)
-        self._stars["outer_1"].start()
-        
-        self.log.info("Calling Center-Integration")
-        self._stars["inner_1"].center()
-        self.log.info("Calling Outer-Integration")
-        self._stars["outer_1"].surface()
+        if self._opts.single or self._opts.inner_s:
+            self.log.info("Calling Center-Integration")
+            self._threads["inner_1"].center()
+        if self._opts.single or self._opts.outer_s:
+            self.log.info("Calling Outer-Integration")
+            self._threads["outer_1"].surface()
         
     def end(self):
         """docstring for end"""
-        if self._opts.single:
-            self.log.info("Retrieving Single Integration")
-            ys, ms, data  = self._stars["inner_1"].retrieve()
-            import matplotlib.pyplot as plt
-            # plt.ion()
-            fig = plt.figure()
-            ax1 = fig.add_subplot(221)
-            ax1.loglog(ms,ys[:,0],".-")
-            ax1.set_xlabel("Mass")
-            ax1.set_ylabel("Radius")
-            ax2 = fig.add_subplot(222)
-            ax2.loglog(ms,ys[:,1],".-")
-            ax2.set_xlabel("Mass")
-            ax2.set_ylabel("Luminosity")
-            ax3 = fig.add_subplot(223)
-            ax3.loglog(ms,ys[:,2],".-")
-            ax3.set_xlabel("Mass")
-            ax3.set_ylabel("Pressure")
-            ax4 = fig.add_subplot(224)
-            ax4.loglog(ms,ys[:,3],".-")
-            ax4.set_xlabel("Mass")
-            ax4.set_ylabel("Temperature")
-            plt.show()
-            ys, ms, data  = self._stars["outer_1"].retrieve()
-            ax1.loglog(ms,ys[:,0],".-")
-            ax2.loglog(ms,ys[:,1],".-")
-            ax3.loglog(ms,ys[:,2],".-")
-            ax4.loglog(ms,ys[:,3],".-")
-        for star in self._stars.values():
-            star.stop()
+        self.log.info("Retrieving Integration")
+        if self._opts.single or self._opts.inner_s:
+            ys, ms, data  = self._threads["inner_1"].retrieve()
+            self.log.info("Retrieved Inner Integration")
+        if self._opts.single or self._opts.outer_s:
+            ys, ms, data  = self._threads["outer_1"].retrieve()
+            print "NaNs Retrieved: %d / %d" % (np.sum(np.isnan(ys)),ys.size)
+            self.log.info("Retrieved Outer Integration")
+        raw_input("Continue...")
+        for thread in self._threads.values():
+            thread.stop()
         
     def kill(self):
         """docstring for kill"""
-        for star in self._stars.values():
+        for star in self._threads.values():
             star.kill()
     
 if __name__ == '__main__':

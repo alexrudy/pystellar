@@ -442,7 +442,6 @@ class OpacityTable(object):
         maxes = np.array([(points[:,i] <= np.max(self._tbls[self.n,:,i])).any() for i in xrange(2)]).all()
         mines = np.array([(points[:,i] >= np.min(self._tbls[self.n,:,i])).any() for i in xrange(2)]).all()
         if (mines and maxes):
-            log.debug("Opacity Table Boundary Tests Passed: %r, %r" % (mines,maxes))
             return points
         
         for point in points:
@@ -465,7 +464,6 @@ class OpacityTable(object):
         maxes = np.array([(points[:,i] <= np.max(self._tbls[self.n,:,i])).any() for i in xrange(2)]).all()
         mines = np.array([(points[:,i] >= np.min(self._tbls[self.n,:,i])).any() for i in xrange(2)]).all()
         if (mines and maxes):
-            log.debug("Opacity Table Boundary Tests Passed: %r, %r" % (mines,maxes))
             return True
         
         cols = {0:"logR",1:"logT"}
@@ -524,7 +522,17 @@ class OpacityTable(object):
         assert (logrho is not None) ^ (rho is not None), u"Must provide one and only one value for ρ."
         assert (logT is not None) ^ (T is not None), u"Must provide one and only one value for T"
         
+
+        
         logT = logT if logT is not None else np.log10(T)
         logrho = logrho if logrho is not None else np.log10(rho)
-        return np.power(10,self.lookup(logT=logT,logrho=logrho))
+        kappa = np.power(10,self.lookup(logT=logT,logrho=logrho))
+        if np.sum(np.isnan(kappa)) > 0:
+            self.log.warning("NaN: Kappa: %g logT: %g, logrho: %g" % (kappa,logT,logrho))
+            if T is not None and rho is not None:
+                self.log.debug("T: %g Rho: %g" % (T,rho))
+        else:
+            self.log.debug("Kappa: %g logT: %g, logrho: %g" % (kappa,logT,logrho))
+            
+        return kappa
     

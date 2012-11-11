@@ -42,7 +42,7 @@ def dPdm(r,m):
     :param m: Mass enclosed
     """
     from .constants import G
-    return (- G * m) / (4*np.pi*np.power(r,2))
+    return (- G * m) / (4*np.pi*np.power(r,4))
     
 def dldm(T,rho,X,XCNO,cfg):
     ur"""Find the derivative of luminosity with respect to mass.
@@ -91,7 +91,7 @@ def derivatives(xs,ys,mu,optable,X,XCNO,cfg):
     :returns: The sets of (dr,dl,dP,dT) of derivatives.
     """
     
-    r, l, P, T = np.asarray(ys).T
+    r, l, P, T = np.asarray(ys).T        
     m = np.asarray(xs)
     rho = density(P=P,T=T,mu=mu)
     optable.kappa(rho=rho,T=T)

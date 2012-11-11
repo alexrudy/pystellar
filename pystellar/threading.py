@@ -101,7 +101,7 @@ class ObjectManager(object):
             "input_Q" : self.input,
             "output_Q": self.output,
             "timeout" : self._timeout,
-            "locking" : self.locking,
+            "locking" : self._locking,
             "lock" : self._lock
         }
     
@@ -115,6 +115,13 @@ class ObjectManager(object):
             return func,args,kwargs,rvalue,hdr
         else:
             return rvalue
+    
+    def release(self,timeout=None):
+        """Release a given lock, throwing away an outputs."""
+        timeout = self._timeout if timeout is None else timeout
+        hdr,func,args,kwargs,rvalue = self.output.get(timeout=timeout)
+        if self._locking:
+            self._lock.release()
         
     def clear(self):
         """Clear and join the queues"""
@@ -131,6 +138,10 @@ class ObjectThread(ObjectManager,Process):
         self._kwargs = ikwargs
     
     STOP = '..stop'
+    
+    def kill(self):
+        return super(ObjectThread, self).terminate()
+        
     
     def stop(self):
         """Send the thread stop signal."""
@@ -155,9 +166,10 @@ class ObjectThread(ObjectManager,Process):
                         rvalue = attr
                     elif len(args)==1 and len(kwargs)==0:
                         setattr(O,func,args)
+                        rvalue = None
                     else:
                         raise AttributeError("Asked for attribute with arguments!")
-                    if rvalue is not None:
+                    if self._locking or rvalue is not None:
                         self.output.put((hdr,func,args,kwargs,rvalue),timeout=self._timeout)
                 except Exception as e:
                     done = True
