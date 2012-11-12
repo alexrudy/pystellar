@@ -128,13 +128,13 @@ class Star(object):
         y = np.asarray(y)
         self._call_count += 1            
         dy = derivatives(xs=x,ys=y,mu=self.mu,optable=self.opacity,X=self.X,XCNO=self.Z,cfg=self.config["Data.Energy"])[:,0]
+        rho = density(P=y[2],T=y[3],mu=self.mu)
         if (y < 0).any():
             self.log.warning("%s: Negative Values Encountered: \n%r, \n%r, \n%r" % (i,x,y,dy))
         else:
-            self.log.debug("%s: Derivs: %r, %r, %r" % (i,x,y,dy))
+            self.log.debug("%s: \nx=%r, \ny=%r, \ndy=%r, \nrho=%g" % (i,x,y,dy,rho))
         if self._call_count % self._update_frequency == 0:
             self.dashboard.insert_data(x,y,i)
-            rho = density(P=y[2],T=y[3],mu=self.mu)
             self.dashboard.add_density(x,rho,i)
             self.dashboard.add_epsilon(x,dy[1],i)
             self.log.info("%d Calls to Integrator \n(x= %g) \n(y= %r) \n(dy= %r)" % (self._call_count,x,y,dy))
@@ -149,6 +149,12 @@ class Star(object):
         else:
             return self.integral
         
+        
+    def show_surface_start(self):
+        """Show a detailed view of the start of integration at the center"""
+        self.fp = (1-1e-3) * self.M
+        self._config["System.Outputs.Size"] = 10
+        return self.surface()
         
     def show_center_start(self):
         """Show a detailed view of the start of integration at the center"""
@@ -184,11 +190,13 @@ class Star(object):
         
         if self._logmode:
             integrator = "LogOuter"
-            ms = np.linspace(np.log10(self.M),np.log10(self.fp),self._config["System.Outputs.Size"])[::-1]
+            ms = np.linspace(np.log10(self.fp),np.log10(self.M),self._config["System.Outputs.Size"])[::-1]
+            print ms
         else:
             integrator = "Outer"
             ms = np.logspace(np.log10(self.fp),np.log10(self.M),self._config["System.Outputs.Size"])[::-1]
         
+        self.log.debug("Surface Conditions (%s): x=%g, y=%r" % (integrator,self.M,np.array(outer_ic)))
         self.log.debug("Starting %s Integration" % integrator)
         if self._scipy:
             return self.scipy(ms,outer_ic,integrator)
@@ -198,7 +206,7 @@ class Star(object):
     
     def pystellar(self,xs,ics,integrator):
         """Run an integration from the central point to the outer edge."""
-        xs,ys,xc,yc = integrate(self.fprime,xs,ics,h0=1e-6,tol=1e-16,args=(integrator,))
+        xs,ys,xc,yc = integrate(self.fprime,xs,ics,args=(integrator,),**self.config["System.Integrator.PyStellar"][integrator]["Arguments"])
         self.log.debug("Finished %s Integration" % integrator)
         return ys, xs, None
         
