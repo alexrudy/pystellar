@@ -26,7 +26,7 @@ class StarEngine(CLIEngine):
     
     module = __name__
     
-    _star_threads = ["inner_1","outer_1"]
+    _star_threads = ["inner_1","outer_1","inner_2","outer_2"]
     
     @property
     def description(self):
@@ -57,6 +57,8 @@ class StarEngine(CLIEngine):
             dest='inner_s', help="Perform only an inner single integration")
         self._parser.add_argument('--no-scipy', action='store_false', 
             dest='scipy', help="Use the custom integrator, not the scipy integrator.")
+        self._parser.add_argument('--no-logmode', action='store_false', 
+            dest='logmode', help="Disable the logarithmic mass variable")
         super(StarEngine, self).parse()
         
     def start(self):
@@ -80,13 +82,19 @@ class StarEngine(CLIEngine):
                 ikwargs=dict(filename=self._opts.config,optable_args=optable_args,dashboard_args=dashboard_args),
                 timeout=self.config["System.Threading.Timeout"],locking=True)
             self._threads[star].start()
-        
-        for star in self._star_threads:
+            
             if self._opts.scipy:
                 self._threads[star].use_scipy()
             else:
                 self._threads[star].use_pystellar()
             self._threads[star].release()
+            
+            if self._opts.logmode:
+                self._threads[star].use_logmode()
+            else:
+                self._threads[star].disable_logmode()
+            self._threads[star].release()
+
     
     def run_single(self):
         """Operate a Single Integrator"""
