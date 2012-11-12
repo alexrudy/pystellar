@@ -64,26 +64,29 @@ class Dashboard(object):
         
     def replace_data(self,xs,ys,ln):
         """Replace data in a given line"""
-        m = np.asarray(xs)
-        r,l,P,T = np.asarray(ys).T
-        for line, data in zip(["radius","luminosity","pressure","temperature"],[r,l,P,T]):
-            self.lines[line][ln].set_data(m,data)
+        if ln not in self.lines["radius"]:
+            self.add_lines(xs,ys,ln)
+        else:
+            m = np.asarray(xs)
+            r,l,P,T = np.asarray(ys).T
+            for line, data in zip(["radius","luminosity","pressure","temperature"],[r,l,P,T]):
+                self.lines[line][ln].set_data(m,data)
         
     def add_lines(self,xs,ys,ln):
         """Add data to the dashboard plots"""
         m = np.asarray(xs)
         r,l,P,T = np.asarray(ys).T
-        self.lines["radius"][ln], = self.axes["radius"].semilogy(m,r,"bo-")
-        self.lines["luminosity"][ln], = self.axes["luminosity"].semilogy(m,l,"go-")
-        self.lines["pressure"][ln], = self.axes["pressure"].plot(m,P,"ro-")
-        self.lines["temperature"][ln], = self.axes["temperature"].plot(m,T,"co-")
+        self.lines["radius"][ln], = self.axes["radius"].plot(m,r,"b-")
+        self.lines["luminosity"][ln], = self.axes["luminosity"].plot(m,l,"g-")
+        self.lines["pressure"][ln], = self.axes["pressure"].plot(m,P,"r-")
+        self.lines["temperature"][ln], = self.axes["temperature"].plot(m,T,"c-")
         
     def add_density(self,xs,ys,ln,append=True):
         """docstring for add_density"""
         m = np.asarray(xs)
         rho = np.asarray(ys)
         if ln not in self.lines["density"]:
-            self.lines["density"][ln], = self.axes["density"].plot(m,rho,"bo-")
+            self.lines["density"][ln], = self.axes["density"].plot(m,rho,"m-")
         elif append:
             add_to_line(self.lines["density"][ln],m,rho)
         else:
@@ -94,7 +97,7 @@ class Dashboard(object):
         m = np.asarray(xs)
         eps = np.asarray(ys)
         if ln not in self.lines["epsilon"]:
-            self.lines["epsilon"][ln], = self.axes["epsilon"].plot(m,eps,"bo-")
+            self.lines["epsilon"][ln], = self.axes["epsilon"].plot(m,eps,"m-")
         elif append:
             add_to_line(self.lines["epsilon"][ln],m,eps)
         else:
@@ -116,5 +119,9 @@ class Dashboard(object):
             ax.autoscale_view()
         self.figures["main"].canvas.draw()
         self.log.debug("Dashboard Updated")
+        
+    def save(self):
+        """Save the final integration result"""
+        self.figures["main"].savefig("Integration.pdf")
         
         
