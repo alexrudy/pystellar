@@ -45,7 +45,7 @@ def step_adapt(f,x,y,h,args=(),tol=1e-8):
     return ystep,h
     
     
-def integrate(fprime,x,y0,h0,tol=1e-8):
+def integrate(fprime,x,y0,h0,args=(),tol=1e-8):
     """Integrator!"""
     x = np.asarray(x)
     y0 = np.asarray(y0)
@@ -56,7 +56,7 @@ def integrate(fprime,x,y0,h0,tol=1e-8):
     yc = y0
     while xc <= x[-1]:
         xn += hc
-        yc,hc = step_adapt(fprime,xc,yc,hc,tol=tol)
+        yc,hc = step_adapt(fprime,xc,yc,hc,args=args,tol=tol)
         xc = xn
         # y[x == xc] = yc
     return x,y,xc,yc
