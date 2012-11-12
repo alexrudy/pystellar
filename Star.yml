@@ -2,7 +2,7 @@ Star:
   Initial:
     Ls: 1.0 #units of solar luminosity
     Rs: 1.0 #units of solar radius
-    Pc: 2.477e17
+    Pc: 2.477e16
     Tc: 1.571e7
     dm: 1.0e-7
     Convective: False
@@ -37,25 +37,36 @@ Data:
 System:
   Opacity:
     Snap: True
-    Error: False
+    Error: True
     Timeout: 130
   Threading:
     Timeout: 130
   Outputs:
     Size: 500
   Dashboard:
-    Update: 100
+    Update: 600
     Timeout: 300
   Integrator:
+    PyStellar:
+      Outer:
+        Arguments:
+          h0: !!float 1.0e-18
+          tol: !!float 1e-1
+      LogOuter:
+        Arguments:
+          h0: !!float -1e-10
+          tol: !!float 1e-1
     Scipy:
       LogOuter:
         Arguments:
           mxstep: 100000
-          h0: !!float 1.0e-5
-          hmin: !!float 1.0e-10
-          hmax: !!float 1.0e-4  
-          rtol: !!float 1.0e-12
-          atol: !!float 1.0e-20
+          h0: !!float -1.0e-10
+          hmin: !!float 1.0e-18
+          hmax: !!float 1.0e-3
+          rtol: !!float 1.0e-9
+          atol: !!float 1.0e-9
+          mxordn: 5
+          mxords: 5
       LogInner:
         Arguments:
           mxstep: 100000
@@ -68,13 +79,11 @@ System:
         Arguments:
           mxstep: 100000
           h0: !!float 1.0e29
-          hmin: !!float 1.0e30
+          hmin: !!float 1.0e28
           hmax: !!float 1.0e33
       Outer:
         Arguments:
           mxstep: 100000
-          h0: !!float -1.0e25
-          hmax: !!float 1.0e28
-          hmin: !!float 1.0e10
-          rtol: !!float 1.0e-12
-          atol: !!float 1.0e-20
+          h0: !!float -1.0e23
+          hmax: !!float 1.0e30
+          hmin: !!float 1.0e14
