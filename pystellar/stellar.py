@@ -16,7 +16,7 @@ from __future__ import division
 
 import numpy as np
 
-from .density import density
+from .density import density, ldensity
 from .energy import epp, eCNO
 
 def drdm(r,rho):
@@ -31,6 +31,19 @@ def drdm(r,rho):
     
     """
     return 1 / (4*np.pi*np.power(r,2)*rho)
+    
+def dlogrdlogm(lr,lrho):
+    ur"""Find the derivative of radius with respect to mass.
+    
+    .. math::
+        \frac{d\log(r)}{d\log(m)} = \frac{1}{4\pi r^2 \rho}
+        
+    
+    :param r: Radius
+    :param rho: Density
+    
+    """
+    return np.log10(1 / (4*np.pi)) - 2 * lr - lrho
     
 def dPdm(r,m):
     ur"""Find the derivative of the pressure with respect to mass.
@@ -47,10 +60,12 @@ def dPdm(r,m):
 def dldm(T,rho,X,XCNO,cfg):
     ur"""Find the derivative of luminosity with respect to mass.
     
-    .. todo::
-        This function is entirely dependent on the total energy generation rate, a quantity we haven't explored yet at all. As such, this function really does nothing!
     """
     return epp(T=T,rho=rho,X=X,c=cfg) + eCNO(T=T,rho=rho,X=X,XCNO=XCNO,c=cfg)
+
+def dlogldlogm(T,rho,X,XCNO,cfg):
+    """Logarithmic Luminosity Derivative"""
+    return np.log10(dldm(T,rho,X,XCNO,cfg))
 
 def dTdm(m,r,l,P,T,rho,optable):
     ur"""Derivative of tempertature with respect to mass.
@@ -100,4 +115,24 @@ def derivatives(xs,ys,mu,optable,X,XCNO,cfg):
     dP = dPdm(r=r,m=m)
     dT = dTdm(m=m,T=T,r=r,P=P,l=l,rho=rho,optable=optable)
     return np.vstack((dr,dl,dP,dT))
+    
+def log_derivatives(xs,ys,mu,optable,X,XCNO,cfg):
+    """Return the full set of derivatives.
+    
+    :param xs: The mass positions, m, at which to find the derivative.
+    :param ys: The sets of (\log(r),\log(l),P,T) at which to find the derivative.
+    :returns: The sets of (dr,dl,dP,dT) of derivatives.
+    """
+    r, l, P, T = np.asarray(ys).T
+    lm = np.asarray(xs)
+    m = np.power(10,lm)
+    rho = density(P=P,T=T,mu=mu)
+    lrho = ldensity(logP=np.log10(P),logT=np.log10(T),mu=mu)
+    optable.kappa(rho=rho,T=T)
+    dr = drdm(r=r,rho=rho)
+    dl = dldm(T=T,rho=rho,X=X,XCNO=XCNO,cfg=cfg)
+    dP = dPdm(r=r,m=m)
+    dT = dTdm(m=m,T=T,r=r,P=P,l=l,rho=rho,optable=optable)
+    return np.vstack((dr,dl,dP,dT))
+    
     
