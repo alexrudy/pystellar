@@ -12,6 +12,7 @@ from .star import Star
 from .dashboard import Dashboard
 
 import logging
+import time
 
 import numpy as np
 
@@ -71,6 +72,7 @@ class StarEngine(CLIEngine):
         """Start the engine!"""
         if self._opts.verbose:
             self._main_log.setLevel(logging.DEBUG)
+        self._start_time = time.clock()
         self._threads["master"] = Star(filename=self._opts.config)
         self._threads["opacity"] = self._threads["master"].opacity
         self._threads["dashboard"] = ObjectThread(Dashboard,timeout=self.config["System.Dashboard.Timeout"],locking=False)
@@ -128,6 +130,9 @@ class StarEngine(CLIEngine):
             ys, ms, data  = self._threads["outer_1"].retrieve()
             print "NaNs Retrieved: %d / %d" % (np.sum(np.isnan(ys)),ys.size)
             self.log.info("Retrieved Outer Integration")
+        self._threads["dashboard"].save()
+        total_time = time.clock()-self._start_time
+        self.log.info("Total time taken: %fs" % total_time)
         raw_input("Continue...")
         for thread in self._threads.values():
             thread.stop()
