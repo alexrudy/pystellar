@@ -4,7 +4,8 @@ Star:
     Rs: 1.0 #units of solar radius
     Pc: 2.477e17
     Tc: 1.571e7
-    dm: 1.0e-9
+    dm: 1.0e-7
+    Convective: False
   Composition:
     X: 0.70
     Y: 0.28
@@ -41,9 +42,10 @@ System:
   Threading:
     Timeout: 130
   Outputs:
-    Size: 50
+    Size: 500
   Dashboard:
-    Update: 1000
+    Update: 100
+    Timeout: 300
   Integrator:
     Scipy:
       LogOuter:
@@ -57,17 +59,17 @@ System:
       LogInner:
         Arguments:
           mxstep: 100000
-          h0: !!float 1.0e-5
-          hmin: !!float 1.0e-8
-          hmax: !!float 1.0e-4
+          h0: !!float 1.0e-8
+          hmin: !!float 1.0e-20
+          hmax: !!float 1.0e-2
           rtol: !!float 1.0e-12
           atol: !!float 1.0e-20
       Inner:
         Arguments:
           mxstep: 100000
-          h0: !!float 1.0e15
-          hmin: !!float 1.0e10
-          hmax: !!float 1.0e23
+          h0: !!float 1.0e29
+          hmin: !!float 1.0e30
+          hmax: !!float 1.0e33
       Outer:
         Arguments:
           mxstep: 100000
