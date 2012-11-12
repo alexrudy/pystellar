@@ -6,7 +6,7 @@
 #  Created by Alexander Rudy on 2012-11-10.
 #  Copyright 2012 Alexander Rudy. All rights reserved.
 # 
-
+from __future__ import division
 import numpy as np
 
 def epp(T,rho,X,c):
