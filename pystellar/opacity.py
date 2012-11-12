@@ -528,11 +528,11 @@ class OpacityTable(object):
         logrho = logrho if logrho is not None else np.log10(rho)
         kappa = np.power(10,self.lookup(logT=logT,logrho=logrho))
         if np.sum(np.isnan(kappa)) > 0:
-            self.log.warning("NaN: Kappa: %g logT: %g, logrho: %g" % (kappa,logT,logrho))
+            self.log.warning("NaN: Kappa: %r logT: %r, logrho: %r" % (kappa,logT,logrho))
             if T is not None and rho is not None:
-                self.log.debug("T: %g Rho: %g" % (T,rho))
+                self.log.debug("T: %r Rho: %r" % (T,rho))
         else:
-            self.log.debug("Kappa: %g logT: %g, logrho: %g" % (kappa,logT,logrho))
+            self.log.debug("Kappa: %r logT: %r, logrho: %r" % (kappa,logT,logrho))
             
         return kappa
     
