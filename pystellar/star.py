@@ -19,8 +19,8 @@ from multiprocessing import Process
 from pystellar.opacity import OpacityTable
 from pystellar.threading import ObjectThread, ObjectManager
 
-from pystellar.initial import inner_boundary, outer_boundary
-from pystellar.stellar import derivatives
+from pystellar.initial import inner_boundary, log_inner_boundary, log_outer_boundary, outer_boundary
+from pystellar.stellar import derivatives, log_derivatives
 from pystellar.density import mmw, density
 from .integrator import integrate
 
@@ -30,6 +30,7 @@ class Star(object):
         super(Star, self).__init__()
         self.log = logging.getLogger(__name__)
         self._scipy = True
+        self._logmode = True
         self._call_count = 0
         self._filename = filename
         
@@ -63,6 +64,14 @@ class Star(object):
         
         self._update_frequency = self._config["System.Dashboard.Update"]
         
+    def use_logmode(self):
+        """Use logarithmic mass variable"""
+        self._logmode = True
+        
+    def disable_logmode(self):
+        """Don't use logarithmic mass variable."""
+        self._logmode = False
+        
     def use_scipy(self):
         """Toggle Scipy On"""
         self._scipy = True
@@ -92,6 +101,27 @@ class Star(object):
         if isinstance(self._opacity,Process):
             self._opacity.stop()
         
+        
+    def log_integral(self,y,lx,i):
+        """Logarithmic Integral Function"""
+        lx = np.asarray(lx)
+        y = np.asarray(y)
+        self._call_count += 1            
+        dy = log_derivatives(xs=lx,ys=y,mu=self.mu,optable=self.opacity,X=self.X,XCNO=self.Z,cfg=self.config["Data.Energy"])[:,0]
+        if (y < 0).any():
+            self.log.warning("%s: Negative Values Encountered: \n%r, \n%r, \n%r" % (i,lx,y,dy))
+        else:
+            self.log.debug("%s: Derivs: %r, %r, %r" % (i,lx,y,dy))
+        if self._call_count % self._update_frequency == 0:
+            x = np.power(10,lx)
+            self.dashboard.insert_data(x,y,i)
+            rho = density(P=y[2],T=y[3],mu=self.mu)
+            self.dashboard.add_density(x,rho,i)
+            self.dashboard.add_epsilon(x,dy[1],i)
+            self.log.info("%d Calls to Integrator \n(x= %g) \n(y= %r) \n(dy= %r)" % (self._call_count,x,y,dy))
+            self.dashboard.update()
+        return dy
+        
     def integral(self,y,x,i):
         """docstring for integral"""
         x = np.asarray(x)
@@ -103,15 +133,21 @@ class Star(object):
         else:
             self.log.debug("%s: Derivs: %r, %r, %r" % (i,x,y,dy))
         if self._call_count % self._update_frequency == 0:
-            self.dashboard.add_lines(x,y,i)
+            self.dashboard.insert_data(x,y,i)
             rho = density(P=y[2],T=y[3],mu=self.mu)
             self.dashboard.add_density(x,rho,i)
-            self.log.info("%d Calls to Integrator (x= %g)" % (self._call_count,x))
+            self.dashboard.add_epsilon(x,dy[1],i)
+            self.log.info("%d Calls to Integrator \n(x= %g) \n(y= %r) \n(dy= %r)" % (self._call_count,x,y,dy))
             self.dashboard.update()
-        
         return dy
         
-        
+    @property
+    def fprime(self):
+        """The correct fprime function for integration"""
+        if self._logmode:
+            return self.log_integral
+        else:
+            return self.integral
         
     def center(self):
         """Run the center integration."""
@@ -119,27 +155,41 @@ class Star(object):
         center_ic = inner_boundary(
             Pc=self.Pc_Guess,Tc=self.Tc_Guess,M=self.M,mu=self.mu,m=self.dm_Guess,
             optable=self.opacity,X=self.X,XCNO=self.Z,cfg=self.config["Data.Energy"])
-        ms = np.logspace(np.log10(self.dm_Guess),np.log10(self.fp),self._config["System.Outputs.Size"])
-        self.log.debug("Starting Inner Integration")
-        if self._scipy:
-            return self.scipy(ms,center_ic,"Inner")
+        if self._logmode:
+            integrator = "LogInner"
+            ms = np.linspace(np.log10(self.dm_Guess),np.log10(self.fp),self._config["System.Outputs.Size"])
         else:
-            return self.pystellar(ms,center_ic,"Inner")
+            integrator = "Inner"
+            ms = np.logspace(np.log10(self.dm_Guess),np.log10(self.fp),self._config["System.Outputs.Size"])
+        self.log.debug("Starting %s Integration" % integrator)
+        if self._scipy:
+            return self.scipy(ms,center_ic,integrator)
+        else:
+            return self.pystellar(ms,center_ic,integrator)
         
     def surface(self):
         """Run an integration from the surface to the inner edge"""
-        self.log.debug("Getting Outer Boundaries")
+        self.log.debug("Getting Inner Boundaries")
         outer_ic = outer_boundary(R=self.R_Guess,L=self.L_Guess,M=self.M,mu=self.mu,optable=self.opacity)
-        ms = np.logspace(np.log10(self.fp),np.log10(self.M),self._config["System.Outputs.Size"])[::-1]
-        self.log.debug("Starting Outer Integration")
-        if self._scipy:
-            return self.scipy(ms,outer_ic,"Outer")
+        (r,l,P,T) = outer_ic
+        
+        if self._logmode:
+            integrator = "LogOuter"
+            ms = np.linspace(np.log10(self.M),np.log10(self.fp),self._config["System.Outputs.Size"])[::-1]
         else:
-            return self.pystellar(ms,outer_ic,"Outer")
+            integrator = "Outer"
+            ms = np.logspace(np.log10(self.fp),np.log10(self.M),self._config["System.Outputs.Size"])[::-1]
+        
+        self.log.debug("Starting %s Integration" % integrator)
+        if self._scipy:
+            return self.scipy(ms,outer_ic,integrator)
+        else:
+            return self.pystellar(ms,outer_ic,integrator)
+        
     
     def pystellar(self,xs,ics,integrator):
         """Run an integration from the central point to the outer edge."""
-        xs,ys,xc,yc = integrate(self.integral_xy,ss,ics,h0=1,tol=1e-16,args=(integrator,))
+        xs,ys,xc,yc = integrate(self.fprime,xs,ics,h0=1e24,tol=1e-16,args=(integrator,))
         self.log.debug("Finished %s Integration" % integrator)
         return ys, xs, None
         
@@ -147,9 +197,11 @@ class Star(object):
         """Run an integration from the central point to the outer edge."""
         self.log.debug("Calling %s Scipy Integration" % integrator)
         import scipy.integrate
-        ys, data = scipy.integrate.odeint(self.integral,ics,xs,args=(integrator,),full_output=True,**self.config["System.Integrator.Scipy"][integrator]["Arguments"])
+        ys, data = scipy.integrate.odeint(self.fprime,ics,xs,args=(integrator,),full_output=True,**self.config["System.Integrator.Scipy"][integrator]["Arguments"])
         self.log.debug("Finished %s Integration" % integrator)
-        self.dashboard.insert_data(xs,ys,integrator)
+        if self._logmode:
+            xs = np.power(10,xs)
+        self.dashboard.add_lines(xs,ys,integrator)
         rho = density(P=ys[:,2],T=ys[:,3],mu=self.mu)
         self.dashboard.add_density(xs,rho,integrator)
         self.log.debug("Plotted %s Integration" % integrator)
