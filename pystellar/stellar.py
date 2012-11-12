@@ -89,12 +89,12 @@ def dTdm(m,r,l,P,T,rho,optable):
     grad = np.zeros(rgrad.shape)
     grad[:] = rgrad # Schwartzchild criterion
     grad[rgrad > gradT_ad] = gradT_ad
-    return -(G*m*T)/(4 * np.pi * np.power(r,4) * P) * grad
+    return -(G * m * T )/(4 * np.pi * np.power(r,4) * P) * grad
     
 def radiative_gradient(T,P,l,m,rho,optable):
     """docstring for radiative_gradient"""
     from .constants import G, c, a
-    k = optable.retrieve()    
+    k = optable.retrieve()
     return 3/(16*np.pi*a*c*G) * (k * l * P)/(m * np.power(T,4))
     
     

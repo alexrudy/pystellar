@@ -69,7 +69,7 @@ def inner_boundary(Pc,Tc,M,mu,m,optable,X,XCNO,cfg,convective=False):
         
     """
     rhoc = density(P=Pc,T=Tc,mu=mu)
-    epsilon = (epp(T=Tc,rho=rhoc,X=X,c=cfg) + eCNO(T=Tc,rho=rhoc,X=X,XCNO=XCNO,c=cfg))
+    epsilon = epp(T=Tc,rho=rhoc,X=X,c=cfg) + eCNO(T=Tc,rho=rhoc,X=X,XCNO=XCNO,c=cfg)
     r = inner_radius(rho=rhoc,m=m)
     l = m * epsilon
     P = inner_pressure(Pc=Pc,rho=rhoc,m=m)
@@ -89,7 +89,7 @@ def log_inner_boundary(Pc,Tc,lM,mu,lm,optable,X,XCNO,cfg,convective=True):
     lrhoc = ldensity(logP=np.log10(Pc),logT=np.log10(Tc),mu=mu)
     rhoc = np.power(10,lrhoc)
     m = np.power(10,lm)
-    epsilon = (epp(T=Tc,rho=rhoc,X=X,c=cfg) + eCNO(T=Tc,rho=rhoc,X=X,XCNO=XCNO,c=cfg))
+    epsilon = epp(T=Tc,rho=rhoc,X=X,c=cfg) + eCNO(T=Tc,rho=rhoc,X=X,XCNO=XCNO,c=cfg)
     r = inner_radius(lrho=lrhoc,lm=lm)
     l = m * epsilon
     P = inner_pressure(Pc=Pc,rho=rhoc,m=m)
