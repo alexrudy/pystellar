@@ -19,9 +19,9 @@ from multiprocessing import Process
 from pystellar.opacity import OpacityTable
 from pystellar.threading import ObjectThread, ObjectManager
 
-from pystellar.initial import inner_boundary, log_inner_boundary, log_outer_boundary, outer_boundary
-from pystellar.stellar import derivatives, log_derivatives
-from pystellar.density import mmw, density
+from .initial import inner_boundary, log_inner_boundary, log_outer_boundary, outer_boundary
+from .stellar import derivatives, log_derivatives, radiative_gradient, dldm
+from .density import mmw, density
 from .integrator import integrate
 
 class Star(object):
@@ -149,18 +149,27 @@ class Star(object):
         else:
             return self.integral
         
+        
+    def show_center_start(self):
+        """Show a detailed view of the start of integration at the center"""
+        self.fp = 1e30
+        self._config["System.Outputs.Size"] = 10
+        return self.center()
+        
     def center(self):
         """Run the center integration."""
         self.log.debug("Getting Inner Boundaries")
         center_ic = inner_boundary(
             Pc=self.Pc_Guess,Tc=self.Tc_Guess,M=self.M,mu=self.mu,m=self.dm_Guess,
-            optable=self.opacity,X=self.X,XCNO=self.Z,cfg=self.config["Data.Energy"])
+            optable=self.opacity,X=self.X,XCNO=self.Z,cfg=self.config["Data.Energy"],convective=self.config["Star.Initial.Convective"])
         if self._logmode:
             integrator = "LogInner"
             ms = np.linspace(np.log10(self.dm_Guess),np.log10(self.fp),self._config["System.Outputs.Size"])
         else:
             integrator = "Inner"
             ms = np.logspace(np.log10(self.dm_Guess),np.log10(self.fp),self._config["System.Outputs.Size"])
+            
+        self.log.debug("Inner Conditions (%s): x=%g, y=%r" % (integrator,self.dm_Guess,np.array(center_ic)))
         self.log.debug("Starting %s Integration" % integrator)
         if self._scipy:
             return self.scipy(ms,center_ic,integrator)
@@ -189,7 +198,7 @@ class Star(object):
     
     def pystellar(self,xs,ics,integrator):
         """Run an integration from the central point to the outer edge."""
-        xs,ys,xc,yc = integrate(self.fprime,xs,ics,h0=1e24,tol=1e-16,args=(integrator,))
+        xs,ys,xc,yc = integrate(self.fprime,xs,ics,h0=1e-6,tol=1e-16,args=(integrator,))
         self.log.debug("Finished %s Integration" % integrator)
         return ys, xs, None
         
@@ -201,9 +210,12 @@ class Star(object):
         self.log.debug("Finished %s Integration" % integrator)
         if self._logmode:
             xs = np.power(10,xs)
-        self.dashboard.add_lines(xs,ys,integrator)
+        self.dashboard.replace_data(xs,ys,integrator)
         rho = density(P=ys[:,2],T=ys[:,3],mu=self.mu)
-        self.dashboard.add_density(xs,rho,integrator)
+        eps = dldm(T=ys[:,3],rho=rho,X=self.X,XCNO=self.Z,cfg=self.config["Data.Energy"])
+        self.dashboard.add_density(xs,rho,integrator,append=False)
+        self.dashboard.add_epsilon(xs,eps,integrator,append=False)
+        self.dashboard.update()
         self.log.debug("Plotted %s Integration" % integrator)
         return ys, xs, data
     
