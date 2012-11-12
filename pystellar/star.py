@@ -112,7 +112,7 @@ class Star(object):
             self.log.warning("%s: Negative Values Encountered: \n%r, \n%r, \n%r" % (i,lx,y,dy))
         else:
             self.log.debug("%s: Derivs: %r, %r, %r" % (i,lx,y,dy))
-        if self._call_count % self._update_frequency == 0:
+        if self._update_frequency != 0 and self._call_count % self._update_frequency == 0:
             x = np.power(10,lx)
             self.dashboard.insert_data(x,y,i)
             rho = density(P=y[2],T=y[3],mu=self.mu)
@@ -133,7 +133,7 @@ class Star(object):
             self.log.warning("%s: Negative Values Encountered: \n%r, \n%r, \n%r" % (i,x,y,dy))
         else:
             self.log.debug("%s: \nx=%r, \ny=%r, \ndy=%r, \nrho=%g" % (i,x,y,dy,rho))
-        if self._call_count % self._update_frequency == 0:
+        if self._update_frequency != 0 and self._call_count % self._update_frequency == 0:
             self.dashboard.insert_data(x,y,i)
             self.dashboard.add_density(x,rho,i)
             self.dashboard.add_epsilon(x,dy[1],i)
@@ -191,7 +191,6 @@ class Star(object):
         if self._logmode:
             integrator = "LogOuter"
             ms = np.linspace(np.log10(self.fp),np.log10(self.M),self._config["System.Outputs.Size"])[::-1]
-            print ms
         else:
             integrator = "Outer"
             ms = np.logspace(np.log10(self.fp),np.log10(self.M),self._config["System.Outputs.Size"])[::-1]
@@ -221,6 +220,8 @@ class Star(object):
         self.dashboard.replace_data(xs,ys,integrator)
         rho = density(P=ys[:,2],T=ys[:,3],mu=self.mu)
         eps = dldm(T=ys[:,3],rho=rho,X=self.X,XCNO=self.Z,cfg=self.config["Data.Energy"])
+        # self.opacity.kappa(T=ys[:,3],rho=rho)
+        # eps = radiative_gradient(T=ys[:,3],P=ys[:,2],l=ys[:,1],m=xs,rho=rho,optable=self.opacity)
         self.dashboard.add_density(xs,rho,integrator,append=False)
         self.dashboard.add_epsilon(xs,eps,integrator,append=False)
         self.dashboard.update()
