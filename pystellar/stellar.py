@@ -88,7 +88,7 @@ def dTdm(m,r,l,P,T,rho,optable):
     rgrad = radiative_gradient(T=T,P=P,l=l,m=m,rho=rho,optable=optable)
     grad = np.zeros(rgrad.shape)
     grad[:] = rgrad # Schwartzchild criterion
-    grad[rgrad < gradT_ad] = gradT_ad
+    grad[rgrad > gradT_ad] = gradT_ad
     return -(G*m*T)/(4 * np.pi * np.power(r,4) * P) * grad
     
 def radiative_gradient(T,P,l,m,rho,optable):
@@ -128,7 +128,6 @@ def log_derivatives(xs,ys,mu,optable,X,XCNO,cfg):
     m = np.power(10,lm)
     logspace = m * np.log(10)
     rho = density(P=P,T=T,mu=mu)
-    lrho = ldensity(logP=np.log10(P),logT=np.log10(T),mu=mu)
     optable.kappa(rho=rho,T=T)
     dr = drdm(r=r,rho=rho)
     dl = dldm(T=T,rho=rho,X=X,XCNO=XCNO,cfg=cfg)
