@@ -126,6 +126,7 @@ def log_derivatives(xs,ys,mu,optable,X,XCNO,cfg):
     r, l, P, T = np.asarray(ys).T
     lm = np.asarray(xs)
     m = np.power(10,lm)
+    logspace = m * np.log(10)
     rho = density(P=P,T=T,mu=mu)
     lrho = ldensity(logP=np.log10(P),logT=np.log10(T),mu=mu)
     optable.kappa(rho=rho,T=T)
@@ -133,6 +134,6 @@ def log_derivatives(xs,ys,mu,optable,X,XCNO,cfg):
     dl = dldm(T=T,rho=rho,X=X,XCNO=XCNO,cfg=cfg)
     dP = dPdm(r=r,m=m)
     dT = dTdm(m=m,T=T,r=r,P=P,l=l,rho=rho,optable=optable)
-    return np.vstack((dr,dl,dP,dT))
+    return np.vstack((dr,dl,dP,dT)) * logspace
     
     
