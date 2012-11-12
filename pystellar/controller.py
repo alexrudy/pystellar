@@ -59,13 +59,17 @@ class StarEngine(CLIEngine):
             dest='scipy', help="Use the custom integrator, not the scipy integrator.")
         self._parser.add_argument('--no-logmode', action='store_false', 
             dest='logmode', help="Disable the logarithmic mass variable")
+        self._parser.add_argument('-v',action='store_true',
+            dest='verbose', help="Enable verbosity.")
         super(StarEngine, self).parse()
         
     def start(self):
         """Start the engine!"""
+        if self._opts.verbose:
+            self._main_log.setLevel(logging.DEBUG)
         self._threads["master"] = Star(filename=self._opts.config)
         self._threads["opacity"] = self._threads["master"].opacity
-        self._threads["dashboard"] = ObjectThread(Dashboard,timeout=self.config["System.Threading.Timeout"],locking=False)
+        self._threads["dashboard"] = ObjectThread(Dashboard,timeout=self.config["System.Dashboard.Timeout"],locking=False)
         self._threads["dashboard"].start()
         self._threads["dashboard"].create_dashboard()
         self._threads["dashboard"].update()
