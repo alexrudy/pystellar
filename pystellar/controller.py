@@ -55,6 +55,8 @@ class StarEngine(CLIEngine):
             dest='outer_s', help="Perform only an outer single integration")
         self._parser.add_argument('--inner', action='store_true',
             dest='inner_s', help="Perform only an inner single integration")
+        self._parser.add_argument('--inner-ic', action='store_true',
+            dest='inner_ic', help="Perform only an inner initial conditions")
         self._parser.add_argument('--no-scipy', action='store_false', 
             dest='scipy', help="Use the custom integrator, not the scipy integrator.")
         self._parser.add_argument('--no-logmode', action='store_false', 
@@ -74,7 +76,7 @@ class StarEngine(CLIEngine):
         self._threads["dashboard"].create_dashboard()
         self._threads["dashboard"].update()
         self.star_threads()
-        if self._opts.single or self._opts.inner_s or self._opts.outer_s:
+        if self._opts.single or self._opts.inner_s or self._opts.outer_s or self._opts.inner_ic:
             self.run_single()
         
     def star_threads(self):
@@ -109,7 +111,9 @@ class StarEngine(CLIEngine):
         if self._opts.single or self._opts.outer_s:
             self.log.info("Calling Outer-Integration")
             self._threads["outer_1"].surface()
-        
+        if self._opts.inner_ic:
+            self._threads["inner_1"].show_center_start()
+            
     def end(self):
         """docstring for end"""
         self.log.info("Retrieving Integration")
