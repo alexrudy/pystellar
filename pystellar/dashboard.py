@@ -15,7 +15,7 @@ def add_to_line(line,x,y):
     data_x,data_y = line.get_data()
     new_x = np.hstack((data_x,x))
     new_y = np.hstack((data_y,y))  
-    line.set_data(new_x,new_y)  
+    line.set_data(new_x,new_y)
 
 class Dashboard(object):
     """An object for managing a pyplot dashboard."""
@@ -62,33 +62,44 @@ class Dashboard(object):
         else:
              self.update_lines(xs,ys,ln)
         
+    def replace_data(self,xs,ys,ln):
+        """Replace data in a given line"""
+        m = np.asarray(xs)
+        r,l,P,T = np.asarray(ys).T
+        for line, data in zip(["radius","luminosity","pressure","temperature"],[r,l,P,T]):
+            self.lines[line][ln].set_data(m,data)
         
     def add_lines(self,xs,ys,ln):
         """Add data to the dashboard plots"""
         m = np.asarray(xs)
         r,l,P,T = np.asarray(ys).T
-        self.lines["radius"][ln], = self.axes["radius"].loglog(m,r,"bo-")
-        self.lines["luminosity"][ln], = self.axes["luminosity"].loglog(m,l,"go-")
-        self.lines["pressure"][ln], = self.axes["pressure"].loglog(m,P,"ro-")
-        self.lines["temperature"][ln], = self.axes["temperature"].loglog(m,T,"co-")
+        self.lines["radius"][ln], = self.axes["radius"].semilogy(m,r,"bo-")
+        self.lines["luminosity"][ln], = self.axes["luminosity"].semilogy(m,l,"go-")
+        self.lines["pressure"][ln], = self.axes["pressure"].plot(m,P,"ro-")
+        self.lines["temperature"][ln], = self.axes["temperature"].plot(m,T,"co-")
         
-    def add_density(self,xs,ys,ln):
+    def add_density(self,xs,ys,ln,append=True):
         """docstring for add_density"""
         m = np.asarray(xs)
         rho = np.asarray(ys)
         if ln not in self.lines["density"]:
-            self.lines["density"][ln], = self.axes["density"].semilogx(m,rho,"bo-")
-        else:
+            self.lines["density"][ln], = self.axes["density"].plot(m,rho,"bo-")
+        elif append:
             add_to_line(self.lines["density"][ln],m,rho)
+        else:
+            self.lines["density"][ln].set_data(m,rho)
     
-    def add_epsilon(self,xs,ys,ln):
+    def add_epsilon(self,xs,ys,ln,append=True):
         """docstring for add_density"""
         m = np.asarray(xs)
         eps = np.asarray(ys)
         if ln not in self.lines["epsilon"]:
-            self.lines["epsilon"][ln], = self.axes["epsilon"].semilogx(m,eps,"bo-")
-        else:
+            self.lines["epsilon"][ln], = self.axes["epsilon"].plot(m,eps,"bo-")
+        elif append:
             add_to_line(self.lines["epsilon"][ln],m,eps)
+        else:
+            self.lines["epsilon"][ln].set_data(m,eps)
+            
         
     def update_lines(self,xs,ys,ln):
         """Update the dashboard plots"""
