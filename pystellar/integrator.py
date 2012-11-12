@@ -32,7 +32,7 @@ def step_adapt(f,x,y,h,args=(),tol=1e-8):
     fprime = lambda x,y : f(y,x,*args)
     k = np.empty((6,y.shape[0]))
     
-    k[0] = h * fprime(x+c1,y)
+    k[0] = h * fprime(x+c1*h,y)
     k[1] = h * fprime(x+c2*h,y+a21*k[0])
     k[2] = h * fprime(x+c3*h,y+a31*k[0]+a32*k[1])
     k[3] = h * fprime(x+c4*h,y+a41*k[0]+a42*k[1]+a43*k[2])
@@ -41,8 +41,14 @@ def step_adapt(f,x,y,h,args=(),tol=1e-8):
     
     ystep = y + (b1s*k[0] + b2s*k[1] + b3s*k[2] + b4s*k[3] + b5s*k[4] + b6s*k[5])
     err = (b1*k[0] + b2*k[1] + b3*k[2] + b4*k[3] + b5*k[4] + b6*k[5]) - (b1s*k[0] + b2s*k[1] + b3s*k[2] + b4s*k[3] + b5s*k[4] + b6s*k[5])
-    hn = 0.9 * h * tol/np.abs(err)
-    return ystep,h
+    adj = tol/np.abs(np.min(err))
+    if adj > 1e3:
+        adj = 1e3
+    if not np.isfinite(adj):
+        adj = 1.0
+    opts = np.abs(np.hstack((y/k[0],1.1)))
+    hn = 0.1 * h * adj
+    return ystep,hn
     
     
 def integrate(fprime,x,y0,h0,args=(),tol=1e-8):
@@ -54,7 +60,7 @@ def integrate(fprime,x,y0,h0,args=(),tol=1e-8):
     xc = x[0]
     xn = xc
     yc = y0
-    while xc <= x[-1]:
+    while (xc-x[-1])/(x[-1]-x[0]) <= 0:
         xn += hc
         yc,hc = step_adapt(fprime,xc,yc,hc,args=args,tol=tol)
         xc = xn
