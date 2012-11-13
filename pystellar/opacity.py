@@ -530,8 +530,9 @@ class OpacityTable(object):
         logrho = logrho if logrho is not None else np.log10(rho)
         kappa = np.power(10,self.lookup(logT=logT,logrho=logrho))
         knans = np.sum(np.isnan(kappa))
-        if knans > 0 and self._warnings["NaNs"] < self._warnings_max:
+        if knans > 0:
             self._warnings["NaNs"] += 1
+        if knans > 0 and self._warnings["NaNs"] < self._warnings_max:
             if len(kappa) == 1:
                 self.log.warning("Opacity Table Returned NaN: Kappa: %g logT: %g, logrho: %g" % (kappa,logT,logrho))
             else:
