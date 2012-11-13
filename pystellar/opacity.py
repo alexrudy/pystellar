@@ -541,7 +541,7 @@ class OpacityTable(object):
             if T is not None and rho is not None:
                 self.log.debug("T: %r Rho: %r" % (T,rho))
         elif knans > 0 and self._warnings["NaNs"] == self._warnings_max:
-            self.log.warning("Caught %d NaN Warnings. Future warnings will be suppressed." % self._warnigns["NaNs"])
+            self.log.warning("Caught %d NaN Warnings. Future warnings will be suppressed." % self._warnings["NaNs"])
             
         return kappa
     
