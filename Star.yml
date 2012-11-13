@@ -18,50 +18,16 @@ Star:
 Data:
   Opacity:
     Config: GN93hz
-  Energy:
-    g11:
-      A: 0.0123
-      B: 0.0109
-      C: 0.0009
-    epp:
-      B: 3.380e1
-      A: 2.38e6
-      f11: 1.0
-    g141:
-      A: 0.0027
-      B: 0.00778
-      C: 0.000149
-    eCNO:
-      A: 8.67e27
-      B: 152.28
 System:
-  Opacity:
-    Snap: True
-    Error: True
-    Timeout: 130
-  Threading:
-    Timeout: 130
-  Outputs:
-    Size: 500
   Dashboard:
     Update: 0
-    Timeout: 300
   Integrator:
-    PyStellar:
-      Outer:
-        Arguments:
-          h0: !!float 1.0e-18
-          tol: !!float 1e-1
-      LogOuter:
-        Arguments:
-          h0: !!float -1e-10
-          tol: !!float 1e-1
     Scipy:
       LogOuter:
         Arguments:
           mxstep: 100000
           h0: !!float -1.0e-10
-          hmin: !!float 1.0e-18
+          hmin: !!float 4e-15
           hmax: !!float 1.0e-3
           rtol: !!float 1.0e-9
           atol: !!float 1.0e-9
@@ -75,15 +41,3 @@ System:
           hmax: !!float 1.0e-2
           rtol: !!float 1.0e-12
           atol: !!float 1.0e-20
-      Inner:
-        Arguments:
-          mxstep: 100000
-          h0: !!float 1.0e20
-          hmin: !!float 1.0e10
-          hmax: !!float 1.0e33
-      Outer:
-        Arguments:
-          mxstep: 100000
-          h0: !!float -1.0e23
-          hmax: !!float 1.0e30
-          hmin: !!float 1.0e14
