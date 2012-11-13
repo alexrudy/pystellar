@@ -7,3 +7,4 @@ homeworks/*.txt
 docs/_build/*
 *.pdf
 Logs/*
+data/star*.dat
