@@ -111,7 +111,7 @@ class Star(object):
         if (y < 0).any():
             self.log.warning(u"%s y<0 at: \nx=%r, \ny=%r, \ndy=%r, \nρ=%g \nε=%g \n∇=%g \nκ=%g" % (i,x,y,dy,rho,eps,agrad,kappa[0]))
         if update:
-            self.append_dashboard(xs,ys,rho,agrad,kappa,eps,line=integrator)
+            self.append_dashboard(xs,ys,rho,agrad,kappa,eps,line=integrator+self.name)
             self.log.info(u"%s %d calls at: \nx=%r, \ny=%r, \ndy=%r, \nρ=%g \nε=%g \n∇=%g \nκ=%g" % (i,self._call_count,x,y,dy,rho,eps,agrad,kappa[0]))
             self.dashboard.update("live")
         if telem:
@@ -193,7 +193,7 @@ class Star(object):
         import scipy.integrate
         ys, data = scipy.integrate.odeint(self.integral,ics,xs,args=(integrator,),
             full_output=True,**self.config["System.Integrator.Scipy"][integrator]["Arguments"])
-        self.log.info("Finished %s Integration: %d derivative calls." % (integrator,self._call_count))
+        self.log.info("Finished %s Integration: %d timesteps, %d function calls for each timestep." % (integrator,data["nst"][-1],data["nfe"][-1]))
         
         if self._logmode:
             xs = np.power(10,xs)
@@ -212,7 +212,7 @@ class Star(object):
         self.data_log.info(stream.getvalue())
         stream.close()
         
-        self.update_dashboard(xs,ys.T,rho,agrad,kappa,eps,line=integrator)
+        self.update_dashboard(xs,ys.T,rho,rgrad,kappa,eps,line=integrator+self.name)
         self.dashboard.update("live")
         
         self.log.debug("Plotted %s Integration" % integrator)
