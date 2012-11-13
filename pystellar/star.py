@@ -75,11 +75,15 @@ class Star(object):
         self.fp = point
         
     def set_guesses(self,R,L,Pc,Tc):
-        """docstring for set_guesses"""
+        """Set the initial guess vector"""
         self.Pc_Guess = Pc
         self.Tc_Guess = Tc
         self.R_Guess = R
         self.L_Guess = L
+        
+    def get_guesses(self):
+        """Return the guess array"""
+        return np.array([self.R_Guess,self.L_Guess,self.Pc_Guess,self.Tc_Guess])
         
     def integral(self,y,x,i):
         """docstring for integral"""
@@ -188,7 +192,7 @@ class Star(object):
         import scipy.integrate
         ys, data = scipy.integrate.odeint(self.integral,ics,xs,args=(integrator,),
             full_output=True,**self.config["System.Integrator.Scipy"][integrator]["Arguments"])
-        self.log.debug("Finished %s Integration: %d derivative calls." % (integrator,self._call_count))
+        self.log.info("Finished %s Integration: %d derivative calls." % (integrator,self._call_count))
         if self._logmode:
             xs = np.power(10,xs)
         rho = density(P=ys[:,2],T=ys[:,3],mu=self.mu)
@@ -275,5 +279,9 @@ class Star(object):
         
     def stop(self):
         """End this star!"""
+        pass
+        
+    def kill(self):
+        """Kill this star!"""
         pass
         
