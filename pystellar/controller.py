@@ -10,6 +10,7 @@
 from .threading import ObjectThread
 from .star import Star
 from .dashboard import Dashboard
+from .newton import NRSolver
 
 import logging, logging.config, logging.handlers
 import time
@@ -70,6 +71,9 @@ class StarEngine(CLIEngine):
             dest='integrator', const='pystellar', default='scipy', help="Use the custom integrator, not the scipy integrator.")
         self._parser.add_argument('--linear', action='store_false', 
             dest='logmode', help="Disable the logarithmic mass variable")
+        self._parser.add_argument('--jac', action='store_true', 
+            dest='jacobian', help="Do the jacobian")
+        
         super(StarEngine, self).parse()
         self.opts.single_inner |= self.opts.single
         self.opts.single_outer |= self.opts.single
@@ -80,14 +84,20 @@ class StarEngine(CLIEngine):
         """Start the engine!"""
         self._start_time = time.clock()
         self._threads["master"] = Star(config=self.config.store)
+        self.stars["master"] = [self.threads["master"]]
         self._threads["opacity"] = self._threads["master"].opacity
         self._threads["dashboard"] = ObjectThread(Dashboard,timeout=self.config["System.Dashboard.Timeout"],locking=False)
         self._threads["dashboard"].start()
         self._threads["dashboard"].create_dashboard()
         self._threads["dashboard"].update()
         self.star_threads()
+        self._threads["newton"] = ObjectThread(NRSolver,ikwargs=dict(stars=self.stars,config=self.config),timeout=self.config["System.Threading.Timeout"],locking=True)
+        self._threads["newton"].start()
         if self.opts.single:
             self.run_single()
+        elif self.opts.jacobian:
+            self.threads["newton"].nrsolve()
+            self.threads["newton"].release()
         
     def star_threads(self):
         """Launch the star threads"""
