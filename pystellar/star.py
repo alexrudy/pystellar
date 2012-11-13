@@ -33,12 +33,16 @@ class Star(object):
         self.telem_log = logging.getLogger("telemetry")
         self.telem_log.propagate = False
         self._call_count = 0
+        self._warning_count = {
+            "Neg" : 0
+        }
         self.name = current_process().name
                 
         self._config = DottedConfiguration(config)
         self._config.dn = DottedConfiguration
         
         self._integrator_name = self.config.get("System.Integrator.Method","scipy")
+        self._max_warnings = self.config["System.Integrator"].get("Warnings",100)
         self._integrator = getattr(self,self._integrator_name)
         self._logmode = self.config.get("System.Integrator.LogScale",True)
         np.set_printoptions(**self.config["System.Numpy.PrintOptions"])
@@ -109,7 +113,11 @@ class Star(object):
             self.opacity.kappa(T=y[3],rho=rho)
             kappa = self.opacity.retrieve()
         if (y < 0).any():
-            self.log.warning(u"%s y<0 at: \nx=%r, \ny=%r, \ndy=%r, \nρ=%g \nε=%g \n∇=%g \nκ=%g" % (i,x,y,dy,rho,eps,agrad,kappa[0]))
+            self._warning_count["Neg"] += 1
+            if self._warning_count["Neg"] == self._max_warnings:
+                self.log.warning("Future Negative Value Warnings will be suppressed. Passed maximum number of warnings: %d" % self._max_warnings)
+            elif self._warning_count["Neg"] < self._max_warnings:
+                self.log.warning(u"%s y<0 at: \nx=%r, \ny=%r, \ndy=%r, \nρ=%g \nε=%g \n∇=%g \nκ=%g" % (i,x,y,dy,rho,eps,agrad,kappa[0]))
         if update:
             self.append_dashboard(xs,ys,rho,agrad,kappa,eps,line=integrator+self.name)
             self.log.info(u"%s %d calls at: \nx=%r, \ny=%r, \ndy=%r, \nρ=%g \nε=%g \n∇=%g \nκ=%g" % (i,self._call_count,x,y,dy,rho,eps,agrad,kappa[0]))
