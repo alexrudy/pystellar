@@ -201,7 +201,7 @@ class OpacityTableError(CodedError):
         return super(OpacityTableError, self).__str__()
         
     def __repr__(self):
-        """docstring for __repr__"""
+        """Representation of this error"""
         return "<" + str(self) + ">"
         
 
@@ -213,7 +213,7 @@ class OpacityTable(object):
     
       
     """
-    def __init__(self, fkey,load=True, filename="OPAL.yml", X=None, Y=None, snap=False, error=True):
+    def __init__(self, fkey,load=True, filename="OPAL.yml", X=None, Y=None, snap=False, error=True, wmax=100):
         super(OpacityTable, self).__init__()
         
         # Initialize our attribute values
@@ -227,6 +227,10 @@ class OpacityTable(object):
         self._interpolator = None # Object for the interpolator
         self._snap = snap   # Snap out-of-bounds objects to the grid.
         self._error = error # Use python errors, or return np.nan
+        self._warnings = {
+            "NaNs" : 0
+        }
+        self._warnings_max = wmax
         
         # Logging Values:
         self.log = logging.getLogger(__name__)
@@ -522,17 +526,22 @@ class OpacityTable(object):
         assert (logrho is not None) ^ (rho is not None), u"Must provide one and only one value for ρ."
         assert (logT is not None) ^ (T is not None), u"Must provide one and only one value for T"
         
-
-        
         logT = logT if logT is not None else np.log10(T)
         logrho = logrho if logrho is not None else np.log10(rho)
         kappa = np.power(10,self.lookup(logT=logT,logrho=logrho))
-        if np.sum(np.isnan(kappa)) > 0:
-            self.log.warning("NaN: Kappa: %r logT: %r, logrho: %r" % (kappa,logT,logrho))
+        knans = np.sum(np.isnan(kappa))
+        if knans > 0 and self._warnings["NaNs"] < self._warnings_max:
+            self._warnings["NaNs"] += 1
+            if len(kappa) == 1:
+                self.log.warning("Opacity Table Returned NaN: Kappa: %g logT: %g, logrho: %g" % (kappa,logT,logrho))
+            else:
+                inans = np.sum(np.isnan(logT)) + np.sum(np.isnan(logrho))
+                inputs = logT.size + logrho.size
+                self.log.warning("Opacity Table Returned NaNs: Kappas: %d/%d, Inputs: %d/%d" % (knans,kappa.size,inans,inpus))
             if T is not None and rho is not None:
                 self.log.debug("T: %r Rho: %r" % (T,rho))
-        else:
-            self.log.debug("Kappa: %r logT: %r, logrho: %r" % (kappa,logT,logrho))
+        elif knans > 0 and self._warnings["NaNs"] == self._warnings_max:
+            self.log.warning("Caught %d NaN Warnings. Future warnings will be suppressed." % self._warnigns["NaNs"])
             
         return kappa
     
