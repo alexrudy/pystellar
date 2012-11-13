@@ -86,7 +86,7 @@ class NRSolver(object):
         for i in xrange(y0.size):
             jac[i] = (f[i] - f0)/dy
             
-        return np.matrix(jac),f0
+        return np.matrix(jac),f0,f
         
     def nrsolve(self):
         """Do the newton-rapson solution"""
@@ -96,11 +96,13 @@ class NRSolver(object):
         
         for n in xrange(self.config["System.NewtonRapson.niters"]):
             y0m = np.matrix(y0).T
-            jac,f0 = self.fd_jacobian(y0)
+            jac,f0,fd1 = self.fd_jacobian(y0)
             ff = 0.5 * np.dot(f0,f0)
             self.log.info("Calculated Jacobian at R=%g, L=%g, Pc=%g, Tc=%g" % tuple(y0) )
             self.log.info("Found Fitting Errors: %r" % f0)
-            self.append_dashboard(np.array([0]),f0,"fitting",marker='o')
+            for fd in fd1:
+                self.append_dashboard(np.array([n]),fd,"fitting",marker='o')
+            self.append_dashboard(np.array([n]),f0,"fitting",marker='o')
             self.dashboard.update("fitting")
             if np.max(np.abs(f0)) < tol:
                 converged = True
