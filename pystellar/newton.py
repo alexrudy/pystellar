@@ -104,14 +104,14 @@ class NRSolver(object):
             if np.max(np.abs(f0)) < tol:
                 break
             dy = (jac.I * y0m).getA().T[0]
-            self.log.info("Moving fit by %r" % dy)
+            self.log.info("Moving fit by total dy= %g, %g, %g, %g" % tuple(dy))
             y0 = self.linear_search(y0,f0,dy,ff)
             
         self.log.info("CONVERGENCE!! after %d iterations" % n)
         self.log.info("Guesses are: \nR=%g\nL=%g\nP=%g\nT=%g" % tuple(y0))
     
     def linear_search(self,x0,f0,dx,ff0):
-        """docstring for linear_search"""
+        """Linear Search Method"""
         step_max = self.config["System.NewtonRapson.linearSearch.stepmax"] * max([np.sqrt(np.sum(np.power(x0,2))),x0.size])
         alpha = self.config["System.NewtonRapson.linearSearch.alpha"]
         step = np.sqrt(np.sum(np.power(-dx,2)))
@@ -129,7 +129,6 @@ class NRSolver(object):
             convergence_steps += 1
             x1 = x0 + alam1 * dx
             self.set_guesses(x1,x1.size)
-            assert False
             self.launch(x1.size)
             if alam1 < alam_min:
                 xr = x0
