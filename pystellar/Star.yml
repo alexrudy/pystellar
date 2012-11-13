@@ -38,8 +38,8 @@ Data:
       B: 152.28
 System:
   Stars:
-    Surface: 2
-    Center: 2
+    Surface: 5
+    Center: 5
   Opacity:
     Snap: true
     Error: true
@@ -56,6 +56,9 @@ System:
     PrintOptions:
       precision: 8
       linewidth: 500
+  NewtonRapson:
+    niters: 100
+    dx: 1e-3
   Integrator:
     LogScae: True
     Method: scipy

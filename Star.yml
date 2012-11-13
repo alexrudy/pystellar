@@ -11,6 +11,7 @@ Star:
     Y: 0.28
     dXc: 0.0
     dXo: 0.0
+    ZdXCNO: 0.7
   Properties:
     M: 1.0 #units of solar mass
   Integration:
