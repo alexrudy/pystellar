@@ -92,7 +92,7 @@ class StarEngine(CLIEngine):
         self._threads["dashboard"].start()
         self._threads["dashboard"].create_dashboard()
         self.star_threads()
-        self._threads["newton"] = ObjectThread(NRSolver,ikwargs=dict(stars=self.stars,config=self.config,dashboard=self.threads["dashboard"]),timeout=self.config["System.Threading.Timeout"],locking=True)
+        self._threads["newton"] = ObjectThread(NRSolver,ikwargs=dict(stars=self.stars,config=self.config,dashboard=self.threads["dashboard"]),timeout=self.config["System.NewtonRapson.Timeout"],locking=True)
         self._threads["newton"].start()
         self.log.info("Threads Launched")
         if self.opts.single:

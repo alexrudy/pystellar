@@ -61,11 +61,13 @@ System:
     text:
       usetex: false
   NewtonRapson:
-    niters: 1
+    Timeout: 3000
+    niters: 10
     dx: 1.0e-5
     tol: 1.0e-7
+    stepmax: 10
     linearSearch:
-      stepmax: 1.0e-8
+      stepmax: 10
       tolX: 1.0e-7
       alpha: 1.0e-4
   Integrator:
