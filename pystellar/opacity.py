@@ -255,18 +255,19 @@ class OpacityTable(object):
         
         # Make ourselves a nearest-neighbor composition interpolator
         self._composition_interpolator()
-        self.log.info("Opacity Interpolator Initialzied")
         
         # If we have a composition, we should use it.
         if X is not None and Y is not None:
             self.composition(X,Y)
+        
+        self.log.info("Opacity Interpolator Initialzied")
         
     def _composition_interpolator(self):
         """Creates the compositional (X,Y,Z) interpolator"""
         from scipy.interpolate import NearestNDInterpolator
         points = self._comp[:,:4]
         values = self._comp[:,4]
-        self.log.info("Composition Interpolating in %d dimensions on %d points" % (points.shape[1],points.shape[0]))
+        self.log.debug("Composition Interpolating in %d dimensions on %d points" % (points.shape[1],points.shape[0]))
         self.log.debug("Input Shapes: [x,y]=%r, [v]=%r" % (repr(points.shape), repr(values.shape)))
         nans = (np.sum(np.isnan(points)), np.sum(np.isnan(values)))
         if nans[0] > 0 or nans[1] > 0:
@@ -281,7 +282,7 @@ class OpacityTable(object):
         values = self._tbls[self.n,:,2]
         points = points[np.isfinite(values)]
         values = values[np.isfinite(values)]
-        self.log.info("Interpolating Opacity in %d dimensions on %d points" % (points.shape[1],points.shape[0]))
+        self.log.debug("Interpolating Opacity in %d dimensions on %d points" % (points.shape[1],points.shape[0]))
         self.log.debug(u"Input Shapes: [logR,logT]=%r, [κ]=%r" % (repr(points.shape), repr(values.shape)))
         
         nans = (np.sum(np.isnan(points)), np.sum(np.isnan(values)))
