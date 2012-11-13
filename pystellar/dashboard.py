@@ -41,6 +41,7 @@ class Dashboard(object):
         for figure in self.config["Dashboard.Figures"]:
             x_sub, y_sub = self.config["Dashboard.Figures"][figure]["layout"]
             self.figures[figure] = self.plt.figure(figsize=tuple(self.config["Dashboard.Figures"][figure]["size"]))
+            self.figures[figure].suptitle(self.config["Dashboard.Figures"][figure].get("title",figure))
             self.axes[figure] = {}
             self.lines[figure] = {}
             for n,axes in enumerate(self.config["Dashboard.Figures"][figure]["axes"]):
