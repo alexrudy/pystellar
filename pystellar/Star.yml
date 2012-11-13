@@ -44,6 +44,7 @@ System:
     Snap: true
     Error: false
     Timeout: 130
+    Warnings: 100
   Threading:
     Timeout: 130
   Outputs:
@@ -68,6 +69,7 @@ System:
       tolX: 1.0e-7
       alpha: 1.0e-4
   Integrator:
+    Warnings: 10
     LogScae: true
     Method: scipy
     PyStellar:
@@ -114,6 +116,7 @@ Dashboard:
   Figures:
     live:
       active: true
+      title: Star Integration
       layout:
         - 3
         - 3
@@ -154,6 +157,32 @@ Dashboard:
           x: "Mass (g)"
           y: "Opacity $\\kappa$"
     fitting:
+      title: Fitting Point Errors
+      layout:
+        - 2
+        - 2
+      size:
+        - 20
+        - 10
+      axes:
+        radius:
+          n: 1
+          x: "Step"
+          y: "Raidus (cm)"
+        luminosity:
+          n: 2
+          x: "Step"
+          y: "Luminosity (ergs/s)"
+        pressure:
+          n: 3
+          x: "Step"
+          y: "Pressure $(Dyne/cm^2)$"
+        temperature:
+          n: 4
+          x: "Step"
+          y: "Temperature (K)"
+    jacobian:
+      title: Guess Adjustments
       layout:
         - 2
         - 2
