@@ -55,7 +55,7 @@ class NRSolver(object):
         self.stars["Center"][nstar].set_guesses(*ys)
         self.stars["Surface"][nstar].release()
         self.stars["Center"][nstar].release()
-        self.log.info("Set Guesses for Star %d to %r" % (nstar,ys))
+        self.log.debug("Set Guesses for Star %d to %r" % (nstar,ys))
         
     def fd_jacobian(self,y0):
         """Forward-difference jacobian from a y0 guess."""
@@ -92,6 +92,7 @@ class NRSolver(object):
         """Do the newton-rapson solution"""
         tol = self.config["System.NewtonRapson.tol"]
         y0 = self._stars["master"][0].get_guesses()
+        converged = False
         
         for n in xrange(self.config["System.NewtonRapson.niters"]):
             y0m = np.matrix(y0).T
@@ -102,12 +103,16 @@ class NRSolver(object):
             self.append_dashboard(np.array([0]),f0,"fitting",marker='o')
             self.dashboard.update("fitting")
             if np.max(np.abs(f0)) < tol:
+                converged = True
                 break
             dy = (jac.I * y0m).getA().T[0]
             self.log.info("Moving fit by total dy= %g, %g, %g, %g" % tuple(dy))
             y0 = self.linear_search(y0,f0,dy,ff)
             
-        self.log.info("CONVERGENCE!! after %d iterations" % n)
+        if converged:
+            self.log.info("CONVERGENCE!! after %d iterations" % n)
+        else:
+            self.log.info("Reached Maximum Iterations: %d" % n)
         self.log.info("Guesses are: \nR=%g\nL=%g\nP=%g\nT=%g" % tuple(y0))
     
     def linear_search(self,x0,f0,dx,ff0):
@@ -161,7 +166,7 @@ class NRSolver(object):
             ff2 = ff1
             alam2 = alam1
             alam1 = 0.1 * alam1 if 0.1 * alam1 > alam0 else alam0
-        self.log.debug("Linear Search Converged after %d steps on %g" % (convergence_steps,xr))
+        self.log.debug("Linear Search Converged after %d steps on %r" % (convergence_steps,xr))
         return xr
     
     def append_dashboard(self,x,y,line=None,**kwargs):
