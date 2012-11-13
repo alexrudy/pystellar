@@ -89,6 +89,7 @@ class Dashboard(object):
                 ax.relim()
                 ax.autoscale_view()
             if figure in self.active_figures:
+                self.figures[figure].show()
                 self.figures[figure].canvas.draw()
         self.log.debug("Dashboard Updated")
         
