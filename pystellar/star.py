@@ -45,6 +45,7 @@ class Star(object):
         self._max_warnings = self.config["System.Integrator"].get("Warnings",100)
         self._integrator = getattr(self,self._integrator_name)
         self._logmode = self.config.get("System.Integrator.LogScale",True)
+        self._plotting = self.config.get("System.Integrator.LivePlot",True)
         np.set_printoptions(**self.config["System.Numpy.PrintOptions"])
         
         if optable_args is None:
@@ -119,9 +120,10 @@ class Star(object):
             elif self._warning_count["Neg"] < self._max_warnings:
                 self.log.warning(u"%s y<0 at: \nx=%r, \ny=%r, \ndy=%r, \nρ=%g \nε=%g \n∇=%g \nκ=%g" % (i,x,y,dy,rho,eps,agrad,kappa[0]))
         if update:
-            self.append_dashboard(xs,ys,rho,agrad,kappa,eps,line=integrator+self.name)
+            if self._plotting:
+                self.append_dashboard(xs,ys,rho,agrad,kappa,eps,line=integrator+self.name)
+                self.dashboard.update("live")
             self.log.info(u"%s %d calls at: \nx=%r, \ny=%r, \ndy=%r, \nρ=%g \nε=%g \n∇=%g \nκ=%g" % (i,self._call_count,x,y,dy,rho,eps,agrad,kappa[0]))
-            self.dashboard.update("live")
         if telem:
             self.telem_log.info(u"%r %r %r %g %g %g %g" % (x,y,dy,rho,eps,agrad,kappa[0]))
         return dy
@@ -152,8 +154,9 @@ class Star(object):
         self._config["System.Outputs.Size"] = 10
         return self.center()
         
-    def center(self):
+    def center(self,plotting=True):
         """Run the center integration."""
+        self._plotting = plotting
         self.log.debug("Getting Inner Boundaries")
         center_ic = inner_boundary(
             Pc=self.Pc_Guess,Tc=self.Tc_Guess,M=self.M,mu=self.mu,m=self.dm_Guess,
@@ -171,8 +174,9 @@ class Star(object):
         return self.integrator(ms,center_ic,integrator)
         
         
-    def surface(self):
+    def surface(self,plotting=True):
         """Run an integration from the surface to the inner edge"""
+        self._plotting = plotting
         self.log.debug("Getting Inner Boundaries")
         outer_ic = outer_boundary(R=self.R_Guess,L=self.L_Guess,M=self.M,mu=self.mu,optable=self.opacity)
         (r,l,P,T) = outer_ic
@@ -220,8 +224,9 @@ class Star(object):
         self.data_log.info(stream.getvalue())
         stream.close()
         
-        self.update_dashboard(xs,ys.T,rho,rgrad,kappa,eps,line=integrator+self.name)
-        self.dashboard.update("live")
+        if self._plotting:
+            self.update_dashboard(xs,ys.T,rho,rgrad,kappa,eps,line=integrator+self.name)
+            self.dashboard.update("live")
         
         self.log.debug("Plotted %s Integration" % integrator)
         return ys, xs, data
