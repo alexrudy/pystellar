@@ -44,7 +44,7 @@ from pkg_resources import resource_filename
 from warnings import warn
 
 from multiprocessing import Queue, Process, Pool, Manager, Event, Lock, cpu_count, current_process
-
+from Queue import Empty as QEmpty, Full as QFull
 import logging
 # Alex's modules
 from AstroObject.config import DottedConfiguration
@@ -58,6 +58,7 @@ class ThreadStateError(CodedError):
     codes = {
         2**1 : "Immutable thread pool",
         2**2 : "Subthread Error",
+        2**3 : "Subthread Timeout",
     }
     
     def __init__(self,msg,code=0,thread=None):
@@ -108,7 +109,10 @@ class ObjectManager(object):
     def retrieve(self,inputs=False,timeout=None):
         """Retrieve a return value off the top of the output queue"""
         timeout = self._timeout if timeout is None else timeout
-        hdr,func,args,kwargs,rvalue = self.output.get(timeout=timeout)
+        try:
+            hdr,func,args,kwargs,rvalue = self.output.get(timeout=timeout)
+        except QFull, QEmpty:
+            raise ThreadStateError(code=2**3,msg="Subthread Ended")
         if self._locking:
             self._lock.release()
         if inputs:
@@ -119,7 +123,10 @@ class ObjectManager(object):
     def release(self,timeout=None):
         """Release a given lock, throwing away an outputs."""
         timeout = self._timeout if timeout is None else timeout
-        hdr,func,args,kwargs,rvalue = self.output.get(timeout=timeout)
+        try:
+            hdr,func,args,kwargs,rvalue = self.output.get(timeout=timeout)
+        except QFull, QEmpty:
+            raise ThreadStateError(code=2**3,msg="Subthread Ended")
         if self._locking:
             self._lock.release()
         
@@ -171,6 +178,8 @@ class ObjectThread(ObjectManager,Process):
                         raise AttributeError("Asked for attribute with arguments!")
                     if self._locking or rvalue is not None:
                         self.output.put((hdr,func,args,kwargs,rvalue),timeout=self._timeout)
+                except QEmpty, QFull:
+                    done = True
                 except Exception as e:
                     done = True
                     raise #ThreadStateError(msg=str(e),code=2**2,thread=self.pid)
@@ -190,7 +199,10 @@ class ObjectPassthrough(ObjectThread):
         timeout = self._timeout if timeout is None else timeout
         self.stop()
         self.run()
-        hdr,func,args,kwargs,rvalue = self.output.get(timeout=timeout)
+        try:
+            hdr,func,args,kwargs,rvalue = self.output.get(timeout=timeout)
+        except QEmpty, QFull:
+            raise 
         if inputs:
             return func,args,kwargs,rvalue
         else:
