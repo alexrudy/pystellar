@@ -1,0 +1,181 @@
+Star:
+  Initial:
+    Ls: 1.0 #units of solar luminosity
+    Rs: 1.0 #units of solar radius
+    Pc: 2.477e17
+    Tc: 1.571e7
+    dm: 1.0e-10
+    Convective: false
+  Composition:
+    X: 0.70
+    Y: 0.28
+    dXc: 0.0
+    dXo: 0.0
+    ZdXCNO: 0.7
+  Properties:
+    M: 1.0 #units of solar mass
+  Integration:
+    fp: 0.5
+Data:
+  Opacity:
+    Config: GN93hz
+  Energy:
+    g11:
+      A: 0.0123
+      B: 0.0109
+      C: 0.0009
+    epp:
+      psi: 1.0
+      B: 3.380e1
+      A: 2.38e6
+      f11: 1.0
+    g141:
+      A: 0.0027
+      B: 0.00778
+      C: 0.000149
+    eCNO:
+      A: 8.67e27
+      B: 152.28
+System:
+  Stars:
+    Surface: 2
+    Center: 2
+  Opacity:
+    Snap: true
+    Error: true
+    Timeout: 130
+  Threading:
+    Timeout: 130
+  Outputs:
+    Size: 500
+    Update: 100
+  Dashboard:
+    Update: 0
+    Timeout: 300
+  Numpy:
+    PrintOptions:
+      precision: 8
+      linewidth: 500
+  Integrator:
+    LogScae: True
+    Method: scipy
+    PyStellar:
+      Surface:
+        Arguments:
+          h0: !!float 1.0e-18
+          tol: !!float 1e-1
+      LogSurface:
+        Arguments:
+          h0: !!float -1e-10
+          tol: !!float 1e-1
+    Scipy:
+      LogSurface:
+        Arguments:
+          mxstep: 100000
+          h0: !!float -1.0e-10
+          hmin: !!float 4e-15
+          hmax: !!float 1.0e-3
+          rtol: !!float 1.0e-9
+          atol: !!float 1.0e-9
+          mxordn: 5
+          mxords: 5
+      LogCenter:
+        Arguments:
+          mxstep: 100000
+          h0: !!float 1.0e-8
+          hmin: !!float 1.0e-15
+          hmax: !!float 1.0e-2
+          rtol: !!float 1.0e-12
+          atol: !!float 1.0e-20
+      Center:
+        Arguments:
+          mxstep: 100000
+          h0: !!float 1.0e20
+          hmin: !!float 1.0e10
+          hmax: !!float 1.0e33
+      Surface:
+        Arguments:
+          mxstep: 100000
+          h0: !!float -1.0e23
+          hmax: !!float 1.0e30
+          hmin: !!float 1.0e14
+Logging:
+  version: 1
+  formatters:
+    stdout:
+      format: "%(processName)-15s - %(levelname)-8s --> %(message)s"
+    data:
+      format: "%(message)s"
+    telemetry:
+      format: "%(relativeCreated)d %(message)s"
+    file:
+      format: "%(asctime)s : %(levelname)s : %(processName)s %(message)s"
+  handlers:
+    libraries:
+      class : logging.handlers.TimedRotatingFileHandler
+      formatter: file
+      when: 'H'
+      interval: 2
+      filename: Logs/PyStellar.Libraries.log
+      backupCount: 2
+      encoding: utf-8
+      level: DEBUG
+    console:
+      class: logging.StreamHandler
+      formatter: stdout
+      level: INFO
+    file:
+      class : logging.handlers.TimedRotatingFileHandler
+      formatter: file
+      when: 'H'
+      interval: 2
+      filename: Logs/PyStellar.log
+      backupCount: 2
+      encoding: utf-8
+    warnings:
+      class : logging.handlers.TimedRotatingFileHandler
+      formatter: file
+      when: 'H'
+      interval: 2
+      filename: Logs/PyStellar.Warnings.log
+      backupCount: 2
+      encoding: utf-8
+      level: WARNING
+    data:
+      class: logging.FileHandler
+      formatter: data
+      filename: data/star.dat
+      encoding: utf-8
+      mode: w
+      level: DEBUG
+    telemetry:
+      class: logging.FileHandler
+      formatter: telemetry
+      filename: data/star.telemetry.dat
+      encoding: utf-8
+      level: DEBUG
+  loggers:
+    pystellar:
+      level: DEBUG
+      handlers:
+        - console
+        - file
+    telemetry:
+      level: DEBUG
+      handlers:
+        - telemetry
+      propagate: 0
+    data:
+      level: INFO
+      handlers:
+        - data
+      propagate: 0
+    py.warnings:
+      handlers:
+        - warnings
+        - console
+    pyshell:
+      hanlders:
+        - libraries
+      level: DEBUG
+  
