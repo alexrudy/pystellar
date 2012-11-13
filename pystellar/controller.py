@@ -11,7 +11,7 @@ from .threading import ObjectThread
 from .star import Star
 from .dashboard import Dashboard
 
-import logging
+import logging, logging.config, logging.handlers
 import time
 
 import numpy as np
@@ -27,8 +27,6 @@ class StarEngine(CLIEngine):
     
     module = __name__
     
-    _star_threads = ["inner_1","outer_1","inner_2","outer_2"]
-    
     @property
     def description(self):
         """Text description of the star engine."""
@@ -37,105 +35,130 @@ class StarEngine(CLIEngine):
     def __init__(self):
         super(StarEngine, self).__init__()
         self._threads = {}
+        self._stars = {}
         self.log = logging.getLogger(__name__)
-        self.__setup_main_log()
+        self.datalog = logging.getLogger('data')
+        self.datalog.propagate = False
+        self._parser.add_argument('-q',action='store_true',
+            dest='quiet', help="Run quietly")
+        self._parser.add_argument('-v',action='store_true',
+            dest='verbose', help="Enable verbosity.")
         
-    def __setup_main_log(self):
-        """Setup the main pystellar logger"""
-        self._main_log = logging.getLogger("pystellar")
-        self._stream = logging.StreamHandler()
-        self._stream.setFormatter(logging.Formatter(fmt="--> %(message)s"))
-        self._main_log.addHandler(self._stream)
-        self._main_log.setLevel(logging.INFO)
+    def configure(self):
+        """Configure the engine"""
+        super(StarEngine, self).configure()
+        if self.opts.quiet:
+            self.config["Logging.Handlers.console.level"] = logging.WARNING
+        if self.opts.verbose:
+            self.config["Logging.Handlers.console.level"] = logging.DEBUG
+        logging.captureWarnings(True)
+        logging.config.dictConfig(self.config["Logging"])
         
     def parse(self):
-        """docstring for parse"""
+        """Parse arguments which directly control the system."""
         self._parser.add_argument('--single', action='store_true',
             dest='single', help="Perform only a single integration")
         self._parser.add_argument('--outer', action='store_true',
-            dest='outer_s', help="Perform only an outer single integration")
+            dest='single_outer', help="Perform only an outer single integration")
         self._parser.add_argument('--inner', action='store_true',
-            dest='inner_s', help="Perform only an inner single integration")
+            dest='single_inner', help="Perform only an inner single integration")
         self._parser.add_argument('--inner-ic', action='store_true',
             dest='inner_ic', help="Perform only an inner initial conditions")
         self._parser.add_argument('--outer-ic', action='store_true',
             dest='outer_ic', help="Perform only an inner initial conditions")
-        self._parser.add_argument('--no-scipy', action='store_false', 
-            dest='scipy', help="Use the custom integrator, not the scipy integrator.")
+        self._parser.add_argument('--no-scipy', action='store_const', 
+            dest='integrator', const='pystellar', default='scipy', help="Use the custom integrator, not the scipy integrator.")
         self._parser.add_argument('--linear', action='store_false', 
             dest='logmode', help="Disable the logarithmic mass variable")
-        self._parser.add_argument('-v',action='store_true',
-            dest='verbose', help="Enable verbosity.")
         super(StarEngine, self).parse()
+        self.opts.single_inner |= self.opts.single
+        self.opts.single_outer |= self.opts.single
+        self.opts.single = self.opts.single or self.opts.single_inner or self.opts.single_outer or self.opts.inner_ic or self.opts.outer_ic
+        self.config.setdefault("System.Integrator.Method",self.opts.integrator)
         
     def start(self):
         """Start the engine!"""
-        if self._opts.verbose:
-            self._main_log.setLevel(logging.DEBUG)
         self._start_time = time.clock()
-        self._threads["master"] = Star(filename=self._opts.config)
+        self._threads["master"] = Star(config=self.config.store)
         self._threads["opacity"] = self._threads["master"].opacity
         self._threads["dashboard"] = ObjectThread(Dashboard,timeout=self.config["System.Dashboard.Timeout"],locking=False)
         self._threads["dashboard"].start()
         self._threads["dashboard"].create_dashboard()
         self._threads["dashboard"].update()
         self.star_threads()
-        if self._opts.single or self._opts.inner_s or self._opts.outer_s or self._opts.inner_ic or self._opts.outer_ic:
+        if self.opts.single:
             self.run_single()
         
     def star_threads(self):
         """Launch the star threads"""
         optable_args = self._threads["opacity"].duplicator
         dashboard_args = self._threads["dashboard"].duplicator
-        for star in self._star_threads:
-            self._threads[star] = ObjectThread(Star,
-                ikwargs=dict(filename=self._opts.config,optable_args=optable_args,dashboard_args=dashboard_args),
-                timeout=self.config["System.Threading.Timeout"],locking=True)
-            self._threads[star].start()
-            
-            if self._opts.scipy:
-                self._threads[star].use_scipy()
-            else:
-                self._threads[star].use_pystellar()
-            self._threads[star].release()
-            
-            if self._opts.logmode:
-                self._threads[star].use_logmode()
-            else:
-                self._threads[star].disable_logmode()
-            self._threads[star].release()
-
+        for star in self.config["System.Stars"]:
+            self.stars[star] = []
+            for n in range(self.config["System.Stars"][star]):
+                star_thread_name = "%s-%d" % (star,n)
+                star_thread = ObjectThread(Star,
+                    ikwargs=dict(config=self.config.store,optable_args=optable_args,dashboard_args=dashboard_args),
+                    timeout=self.config["System.Threading.Timeout"],locking=True,name=star_thread_name)
+                self.stars[star] += [star_thread]
+                self.threads[star_thread_name] = star_thread 
+                star_thread.start()
+    
     
     def run_single(self):
         """Operate a Single Integrator"""
         self.log.info("Starting Single Integration")
-        if self._opts.single or self._opts.inner_s:
+        if self.opts.single_inner:
             self.log.info("Calling Center-Integration")
-            self._threads["inner_1"].center()
-        if self._opts.single or self._opts.outer_s:
+            self.stars["Center"][0].center()
+        if self.opts.single_outer:
             self.log.info("Calling Outer-Integration")
-            self._threads["outer_1"].surface()
-        if self._opts.inner_ic:
-            self._threads["inner_1"].show_center_start()
-        if self._opts.outer_ic:
-            self._threads["inner_1"].show_surface_start()
+            self.stars["Surface"][0].surface()
+        
+        if self.opts.inner_ic:
+            self.log.info("Calling Center-IC-Tests")
+            self.stars["Center"][1].show_center_start()
+            self.stars["Center"][1].release()
+        if self.opts.outer_ic:
+            self.log.info("Calling Surface-IC-Tests")
+            self.stars["Surface"][1].show_surface_start()
+            self.stars["Surface"][1].release()
+            
+        self.log.info("Retrieving Integration")
+        if self.opts.single_inner:
+            ys, ms, data  = self.stars["Center"][0].retrieve()
+            self.log.info("Retrieved Inner Integration")
+        if self.opts.single_outer:
+            ys, ms, data  = self.stars["Surface"][0].retrieve()
+            self.log.info("Retrieved Outer Integration")
+        self.dashboard.save()
             
     def end(self):
-        """docstring for end"""
-        self.log.info("Retrieving Integration")
-        if self._opts.single or self._opts.inner_s:
-            ys, ms, data  = self._threads["inner_1"].retrieve()
-            self.log.info("Retrieved Inner Integration")
-        if self._opts.single or self._opts.outer_s:
-            ys, ms, data  = self._threads["outer_1"].retrieve()
-            print "NaNs Retrieved: %d / %d" % (np.sum(np.isnan(ys)),ys.size)
-            self.log.info("Retrieved Outer Integration")
-        self._threads["dashboard"].save()
+        """Things to do at the end of every run!"""
+
         total_time = time.clock()-self._start_time
         self.log.info("Total time taken: %fs" % total_time)
-        raw_input("Continue...")
-        for thread in self._threads.values():
-            thread.stop()
+        for thread in self.threads:
+            if thread is not "dashboard":
+                self.threads[thread].stop()
+        raw_input("To End the Program, press [enter]...\n")
+        self.log.info("Ending Dashboard Process")
+        self.dashboard.stop()
+        
+    @property
+    def threads(self):
+        """Access for threads"""
+        return self._threads
+        
+    @property
+    def stars(self):
+        """Access for threads"""
+        return self._stars
+        
+    @property
+    def dashboard(self):
+        """docstring for dashboard"""
+        return self.threads["dashboard"]
         
     def kill(self):
         """docstring for kill"""
