@@ -183,8 +183,33 @@ Dashboard:
           n: 4
           x: "Step"
           y: "Temperature (K)"
-    jacobian:
+    adjustments:
       title: Guess Adjustments
+      layout:
+        - 2
+        - 2
+      size:
+        - 20
+        - 10
+      axes:
+        radius:
+          n: 1
+          x: "Step"
+          y: "Raidus (cm)"
+        luminosity:
+          n: 2
+          x: "Step"
+          y: "Luminosity (ergs/s)"
+        pressure:
+          n: 3
+          x: "Step"
+          y: "Pressure $(Dyne/cm^2)$"
+        temperature:
+          n: 4
+          x: "Step"
+          y: "Temperature (K)"
+    guesses:
+      title: Initial Conditions
       layout:
         - 2
         - 2

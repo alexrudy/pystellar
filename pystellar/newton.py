@@ -79,8 +79,6 @@ class NRSolver(object):
         for i in xrange(na):
             f[i] = self.fitgap(i)
         
-        
-        
         for i in xrange(y0.size):
             self.log.info("Jacboian Calculation: Delta: %s \nH: %s" % ((f[i] - f0),dy))
             self.log.info("Jacobian Calcualtion Evaluated: %s" % ((f[i] - f0)/dy[i]))
@@ -104,6 +102,7 @@ class NRSolver(object):
             self.log.info("Calculated Jacobian at R=%g, L=%g, Pc=%g, Tc=%g" % tuple(y0) )
             self.log.info("Found Fitting Errors: %r" % f0)
             self.append_dashboard(np.array([n]),f0,line="fitting",marker='o')
+            self.append_dashboard(np.array([n]),y0,figure="guesses",line="guesses",marker='o')
             if np.max(np.abs(f0)) < tol:
                 converged = True
                 break
@@ -111,15 +110,14 @@ class NRSolver(object):
             while (np.abs(dy) > y0 * step_max).any():
                 self.log.warning("Step size is too large! %r" % dy)
                 dy *= step_max/np.sqrt(np.sum(dy**2))
-            self.append_dashboard(np.array([n]),dy,figure="jacobian",line="fitting-jac",marker="o")
-            self.dashboard.update("fitting","jacobian")
+            self.append_dashboard(np.array([n]),dy,figure="adjustments",line="fitting-jac",marker="o")
+            self.dashboard.update("fitting","adjustments","guesses")
             self.log.info("Moving fit by total dy= %g, %g, %g, %g" % tuple(dy))
             y1, f1 = self.linear_search(y0,f0,dy,ff)
-            self.append_dashboard(np.array([n]),f1,line="fitting-linear-search",marker='x',ms=3.0)
+            self.append_dashboard(np.array([n]),f1,line="fitting-linear-search",marker='x',ms=6.0)
             f0 = f1
             y0 = y1
-            self.dashboard.update("fitting","jacobian")
-            
+            self.dashboard.update("fitting")
             
         if converged:
             self.log.info("CONVERGENCE!! after %d iterations" % n)
