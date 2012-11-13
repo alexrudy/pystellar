@@ -35,11 +35,11 @@ class NRSolver(object):
     def stars(self):
         return self._stars
         
-    def launch(self,nstar):
+    def launch(self,nstar,plotting=True):
         """Launch integrations on nstar"""
         self.log.info("Launching Star %d" % nstar)
-        self.stars["Surface"][nstar].surface()
-        self.stars["Center"][nstar].center()
+        self.stars["Surface"][nstar].surface(plotting=plotting)
+        self.stars["Center"][nstar].center(plotting=plotting)
         
     def fitgap(self,nstar):
         """Return the fit gap for nstar integrator threads"""
@@ -57,15 +57,13 @@ class NRSolver(object):
         self.stars["Center"][nstar].release()
         self.log.debug("Set Guesses for Star %d to %r" % (nstar,ys))
         
-    def fd_jacobian(self,y0):
+    def fd_jacobian(self,y0,f0):
         """Forward-difference jacobian from a y0 guess."""
         
         epsilon = float(self.config["System.NewtonRapson.dx"])
         dy = epsilon * y0
         nr = y0.size + 1
         na = y0.size
-        self.set_guesses(y0,na)
-        self.launch(na)
         y1 = np.empty((na,na))
         f = np.empty((na,na))
         jac = np.empty((na,na))
@@ -76,42 +74,50 @@ class NRSolver(object):
         
         for i in xrange(na):
             self.set_guesses(y1[i],i)
-            self.launch(i)
+            self.launch(i,plotting=False)
         
         for i in xrange(na):
             f[i] = self.fitgap(i)
         
-        f0 = self.fitgap(na)
+        
         
         for i in xrange(y0.size):
-            jac[i] = (f[i] - f0)/dy
+            self.log.info("Jacboian Calculation: Delta: %s \nH: %s" % ((f[i] - f0),dy))
+            self.log.info("Jacobian Calcualtion Evaluated: %s" % ((f[i] - f0)/dy[i]))
+            jac[i] = (f[i] - f0)/dy[i]
             
-        return np.matrix(jac),f0,f
+        return np.matrix(jac),f
         
     def nrsolve(self):
         """Do the newton-rapson solution"""
-        tol = self.config["System.NewtonRapson.tol"]
+        tol = float(self.config["System.NewtonRapson.tol"])
+        step_max = float(self.config["System.NewtonRapson.stepmax"])
         y0 = self._stars["master"][0].get_guesses()
         converged = False
-        
+        self.set_guesses(y0,y0.size)
+        self.launch(y0.size)
+        f0 = self.fitgap(y0.size)
         for n in xrange(self.config["System.NewtonRapson.niters"]):
             y0m = np.matrix(y0).T
-            jac,f0,fd1 = self.fd_jacobian(y0)
+            jac,fd1 = self.fd_jacobian(y0,f0)
             ff = 0.5 * np.dot(f0,f0)
             self.log.info("Calculated Jacobian at R=%g, L=%g, Pc=%g, Tc=%g" % tuple(y0) )
             self.log.info("Found Fitting Errors: %r" % f0)
-            for fd in fd1:
-                self.append_dashboard(np.array([n]),fd,line="fitting-jac",marker='x')
             self.append_dashboard(np.array([n]),f0,line="fitting",marker='o')
             if np.max(np.abs(f0)) < tol:
                 converged = True
                 break
             dy = (jac.I * y0m).getA().T[0]
+            while (np.abs(dy) > y0 * step_max).any():
+                self.log.warning("Step size is too large! %r" % dy)
+                dy *= step_max/np.sqrt(np.sum(dy**2))
             self.append_dashboard(np.array([n]),dy,figure="jacobian",line="fitting-jac",marker="o")
             self.dashboard.update("fitting","jacobian")
             self.log.info("Moving fit by total dy= %g, %g, %g, %g" % tuple(dy))
-            y0, f1 = self.linear_search(y0,f0,dy,ff)
-            self.append_dashboard(np.array([n]),f1,line="fitting-linear-search",marker='+')
+            y1, f1 = self.linear_search(y0,f0,dy,ff)
+            self.append_dashboard(np.array([n]),f1,line="fitting-linear-search",marker='x',ms=3.0)
+            f0 = f1
+            y0 = y1
             self.dashboard.update("fitting","jacobian")
             
             
@@ -125,8 +131,9 @@ class NRSolver(object):
         """Linear Search Method"""
         step_max = self.config["System.NewtonRapson.linearSearch.stepmax"] * max([np.sqrt(np.sum(np.power(x0,2))),x0.size])
         alpha = self.config["System.NewtonRapson.linearSearch.alpha"]
-        step = np.sqrt(np.sum(np.power(-dx,2)))
+        step = np.sqrt(np.sum(dx**2))
         if step > step_max:
+            self.log.warning("Linear Search Step size is too large! %r" % dy)
             dx *= step_max/step
         slope = np.sum(-dx * f0)
         if slope > 0:
@@ -172,7 +179,7 @@ class NRSolver(object):
             ff2 = ff1
             alam2 = alam1
             alam1 = 0.1 * alam1 if 0.1 * alam1 > alam0 else alam0
-        self.log.debug("Linear Search Converged after %d steps on %r" % (convergence_steps,xr))
+        self.log.info("Linear Search Converged after %d steps on %r" % (convergence_steps,xr))
         return xr,f1
     
     def append_dashboard(self,x,y,figure='fitting',line=None,**kwargs):
