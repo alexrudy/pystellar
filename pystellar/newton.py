@@ -101,15 +101,19 @@ class NRSolver(object):
             self.log.info("Calculated Jacobian at R=%g, L=%g, Pc=%g, Tc=%g" % tuple(y0) )
             self.log.info("Found Fitting Errors: %r" % f0)
             for fd in fd1:
-                self.append_dashboard(np.array([n]),fd,"fitting",marker='o')
-            self.append_dashboard(np.array([n]),f0,"fitting",marker='o')
-            self.dashboard.update("fitting")
+                self.append_dashboard(np.array([n]),fd,line="fitting-jac",marker='x')
+            self.append_dashboard(np.array([n]),f0,line="fitting",marker='o')
             if np.max(np.abs(f0)) < tol:
                 converged = True
                 break
             dy = (jac.I * y0m).getA().T[0]
+            self.append_dashboard(np.array([n]),dy,figure="jacobian",line="fitting-jac",marker="o")
+            self.dashboard.update("fitting","jacobian")
             self.log.info("Moving fit by total dy= %g, %g, %g, %g" % tuple(dy))
-            y0 = self.linear_search(y0,f0,dy,ff)
+            y0, f1 = self.linear_search(y0,f0,dy,ff)
+            self.append_dashboard(np.array([n]),f1,line="fitting-linear-search",marker='+')
+            self.dashboard.update("fitting","jacobian")
+            
             
         if converged:
             self.log.info("CONVERGENCE!! after %d iterations" % n)
@@ -143,7 +147,7 @@ class NRSolver(object):
             f1 = self.fitgap(x1.size)
             ff1 = 0.5 * np.dot(f1,f1)
             if not converged and ff1 < ff0 + alpha * alam1 * slope:
-                xr = x0
+                xr = x1
                 converged = True
             else:
                 if alam1 == 1.0:
@@ -169,11 +173,11 @@ class NRSolver(object):
             alam2 = alam1
             alam1 = 0.1 * alam1 if 0.1 * alam1 > alam0 else alam0
         self.log.debug("Linear Search Converged after %d steps on %r" % (convergence_steps,xr))
-        return xr
+        return xr,f1
     
-    def append_dashboard(self,x,y,line=None,**kwargs):
+    def append_dashboard(self,x,y,figure='fitting',line=None,**kwargs):
         """Append data to the dashboard"""
         line = self.name if line is None else line
         for yi,name in zip(y,["radius","luminosity","pressure","temperature"]):
-            self.dashboard.append_data(x,yi,figure="fitting",axes=name,line=line,**kwargs)
+            self.dashboard.append_data(x,yi,figure=figure,axes=name,line=line,**kwargs)
         
