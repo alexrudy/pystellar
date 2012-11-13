@@ -60,7 +60,7 @@ System:
     text:
       usetex: false
   NewtonRapson:
-    niters: 2
+    niters: 1
     dx: 1.0e-5
     tol: 1.0e-7
     linearSearch:
@@ -113,7 +113,7 @@ System:
 Dashboard:
   Figures:
     live:
-      active: false
+      active: true
       layout:
         - 3
         - 3
@@ -122,29 +122,37 @@ Dashboard:
         - 10
       axes:
         radius:
+          n: 1
           x: "Mass (g)"
           y: "Raidus (cm)"
         luminosity:
+          n: 2
           x: "Mass (g)"
           y: "Luminosity (ergs/s)"
         pressure:
+          n: 3
           x: "Mass (g)"
           y: "Pressure $(Dyne/cm^2)$"
         temperature:
+          n: 4
           x: "Mass (g)"
           y: "Temperature (K)"
         density:
+          n: 5
           x: "Mass (g)"
           y: "Density $(g/cm^3)$"
         epsilon:
+          n: 6
           x: "Mass (g)"
-          y: "Energy Generation Rate \epsilon (ergs/g)"
+          y: "$\\epsilon$ (ergs/g)"
         gradient:
+          n: 7
           x: "Mass (g)"
           y: "Temperature Gradient"
         opacity:
+          n: 8
           x: "Mass (g)"
-          y: "Opacity \\kappa"
+          y: "Opacity $\\kappa$"
     fitting:
       layout:
         - 2
@@ -154,15 +162,19 @@ Dashboard:
         - 10
       axes:
         radius:
+          n: 1
           x: "Step"
           y: "Raidus (cm)"
         luminosity:
+          n: 2
           x: "Step"
           y: "Luminosity (ergs/s)"
         pressure:
+          n: 3
           x: "Step"
           y: "Pressure $(Dyne/cm^2)$"
         temperature:
+          n: 4
           x: "Step"
           y: "Temperature (K)"
 Logging:
