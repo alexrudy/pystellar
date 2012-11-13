@@ -84,12 +84,17 @@ def dTdm(m,r,l,P,T,rho,optable):
         Figure out how this function should actually handle the temperature gradient
     """
     
-    from .constants import G, gradT_ad
+    from .constants import G
     rgrad = radiative_gradient(T=T,P=P,l=l,m=m,rho=rho,optable=optable)
+    return -(G * m * T )/(4 * np.pi * np.power(r,4) * P) * grad(rgrad)
+    
+def grad(rgrad):
+    """Apply the Schwartzchild criterion"""
+    from .constants import gradT_ad
     grad = np.zeros(rgrad.shape)
     grad[:] = rgrad # Schwartzchild criterion
     grad[rgrad > gradT_ad] = gradT_ad
-    return -(G * m * T )/(4 * np.pi * np.power(r,4) * P) * grad
+    return grad
     
 def radiative_gradient(T,P,l,m,rho,optable):
     """docstring for radiative_gradient"""
