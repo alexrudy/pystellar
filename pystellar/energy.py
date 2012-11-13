@@ -12,8 +12,8 @@ import numpy as np
 def epp(T,rho,X,c):
     """docstring for epp"""
     T6 = T / 1e6
-    psi = 1.0
-    g11 = 1 + float(c["g11.A"]) * np.power(T6,1/3) + float(c["g11.B"]) * np.power(T6,2/3) + float(c["g11.C"])*T6
+    psi = float(c["epp.psi"])
+    g11 = 1 + float(c["g11.A"]) * np.power(T6,1/3) + float(c["g11.B"]) * np.power(T6,2/3) + float(c["g11.C"]) * T6
     epsilon_pp = float(c["epp.A"]) * psi * float(c["epp.f11"]) * g11 * rho * np.power(X,2) * np.power(T6,-2/3) * np.exp(-float(c["epp.B"])/np.power(T6,1/3))
     return epsilon_pp
     
