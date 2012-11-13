@@ -14,7 +14,7 @@ import scipy as sp
 from AstroObject.config import DottedConfiguration
 
 import logging
-from multiprocessing import Process
+from multiprocessing import Process, current_process
 from StringIO import StringIO
 
 from .opacity import OpacityTable
@@ -33,6 +33,7 @@ class Star(object):
         self.telem_log = logging.getLogger("telemetry")
         self.telem_log.propagate = False
         self._call_count = 0
+        self.name = current_process().name
                 
         self._config = DottedConfiguration(config)
         self._config.dn = DottedConfiguration
@@ -100,6 +101,8 @@ class Star(object):
         if (y < 0).any() or update or telem:
             rho = density(P=y[2],T=y[3],mu=self.mu)
             eps = dy[1]
+            if self._logmode:
+                eps /= (x * np.log(10))
             self.opacity.kappa(T=y[3],rho=rho)
             rgrad = radiative_gradient(T=y[3],P=y[2],l=y[1],m=x,rho=rho,optable=self.opacity)
             agrad = grad(rgrad)
@@ -108,11 +111,9 @@ class Star(object):
         if (y < 0).any():
             self.log.warning(u"%s y<0 at: \nx=%r, \ny=%r, \ndy=%r, \nρ=%g \nε=%g \n∇=%g \nκ=%g" % (i,x,y,dy,rho,eps,agrad,kappa[0]))
         if update:
-            self.dashboard.insert_data(x,y,i)
-            self.dashboard.add_density(x,rho,i)
-            self.dashboard.add_epsilon(x,dy[1],i)
+            self.append_dashboard(xs,ys,rho,agrad,kappa,eps,line=integrator)
             self.log.info(u"%s %d calls at: \nx=%r, \ny=%r, \ndy=%r, \nρ=%g \nε=%g \n∇=%g \nκ=%g" % (i,self._call_count,x,y,dy,rho,eps,agrad,kappa[0]))
-            self.dashboard.update()
+            self.dashboard.update("live")
         if telem:
             self.telem_log.info(u"%r %r %r %g %g %g %g" % (x,y,dy,rho,eps,agrad,kappa[0]))
         return dy
@@ -193,8 +194,10 @@ class Star(object):
         ys, data = scipy.integrate.odeint(self.integral,ics,xs,args=(integrator,),
             full_output=True,**self.config["System.Integrator.Scipy"][integrator]["Arguments"])
         self.log.info("Finished %s Integration: %d derivative calls." % (integrator,self._call_count))
+        
         if self._logmode:
             xs = np.power(10,xs)
+        
         rho = density(P=ys[:,2],T=ys[:,3],mu=self.mu)
         eps = dldm(T=ys[:,3],rho=rho,X=self.X,XCNO=self.XCNO,cfg=self.config["Data.Energy"])
         self.opacity.kappa(T=ys[:,3],rho=rho)
@@ -202,21 +205,49 @@ class Star(object):
         agrad = grad(rgrad)
         self.opacity.kappa(T=ys[:,3],rho=rho)
         kappa = self.opacity.retrieve()
+        
         all_data = np.vstack(map(np.atleast_2d,(xs,ys.T,rho,eps,rgrad,agrad,kappa))).T
         stream = StringIO()
         np.savetxt(stream,all_data)
         self.data_log.info(stream.getvalue())
         stream.close()
-        self.dashboard.replace_data(xs,ys,integrator)
-
-        # self.opacity.kappa(T=ys[:,3],rho=rho)
-        # eps = radiative_gradient(T=ys[:,3],P=ys[:,2],l=ys[:,1],m=xs,rho=rho,optable=self.opacity)
-        self.dashboard.add_density(xs,rho,integrator,append=False)
-        self.dashboard.add_epsilon(xs,eps,integrator,append=False)
-        self.dashboard.update()
+        
+        self.update_dashboard(xs,ys.T,rho,agrad,kappa,eps,line=integrator)
+        self.dashboard.update("live")
+        
         self.log.debug("Plotted %s Integration" % integrator)
         return ys, xs, data
     
+    
+    def update_dashboard(self,x,y,rho=None,gradient=None,kappa=None,epsilon=None,line=None):
+        """A wrapper to perform dashboard updates."""
+        line = self.name if line is None else line
+        
+        for yi,name in zip(y,["radius","luminosity","pressure","temperature"]):
+            self.dashboard.update_data(x,yi,figure="live",axes=name,line=line)
+        if rho is not None:
+            self.dashboard.update_data(x,rho,figure="live",axes="density",line=line)
+        if gradient is not None:
+            self.dashboard.update_data(x,gradient,figure="live",axes="gradient",line=line)
+        if kappa is not None:
+            self.dashboard.update_data(x,kappa,figure="live",axes="opacity",line=line)
+        if epsilon is not None:
+            self.dashboard.update_data(x,epsilon,figure="live",axes="epsilon",line=line)
+        
+    def append_dashboard(self,x,y,rho=None,gradient=None,kappa=None,epsilon=None,line=None):
+        """Append data to the dashboard"""
+        line = self.name if line is None else line
+        
+        for yi,name in zip(y,["radius","luminosity","pressure","temperature"]):
+            self.dashboard.append_data(x,yi,figure="live",axes=name,line=line)
+        if rho is not None:
+            self.dashboard.append_data(x,rho,figure="live",axes="density",line=line)
+        if gradient is not None:
+            self.dashboard.append_data(x,gradient,figure="live",axes="gradient",line=line)
+        if kappa is not None:
+            self.dashboard.append_data(x,kappa,figure="live",axes="opacity",line=line)
+        if epsilon is not None:
+            self.dashboard.append_data(x,epsilon,figure="live",axes="epsilon",line=line)
     
     @property
     def dashboard(self):

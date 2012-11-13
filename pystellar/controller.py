@@ -79,6 +79,8 @@ class StarEngine(CLIEngine):
         self.opts.single_outer |= self.opts.single
         self.opts.single = self.opts.single or self.opts.single_inner or self.opts.single_outer or self.opts.inner_ic or self.opts.outer_ic
         self.config.setdefault("System.Integrator.Method",self.opts.integrator)
+        if self.opts.single:
+            self.config["Dashboard.Figures.live.active"] = True
         
     def start(self):
         """Start the engine!"""
@@ -86,13 +88,13 @@ class StarEngine(CLIEngine):
         self._threads["master"] = Star(config=self.config.store)
         self.stars["master"] = [self.threads["master"]]
         self._threads["opacity"] = self._threads["master"].opacity
-        self._threads["dashboard"] = ObjectThread(Dashboard,timeout=self.config["System.Dashboard.Timeout"],locking=False)
+        self._threads["dashboard"] = ObjectThread(Dashboard,iargs=(self.config,),timeout=self.config["System.Dashboard.Timeout"],locking=False)
         self._threads["dashboard"].start()
         self._threads["dashboard"].create_dashboard()
-        self._threads["dashboard"].update()
         self.star_threads()
-        self._threads["newton"] = ObjectThread(NRSolver,ikwargs=dict(stars=self.stars,config=self.config),timeout=self.config["System.Threading.Timeout"],locking=True)
+        self._threads["newton"] = ObjectThread(NRSolver,ikwargs=dict(stars=self.stars,config=self.config,dashboard=self.threads["dashboard"]),timeout=self.config["System.Threading.Timeout"],locking=True)
         self._threads["newton"].start()
+        self.log.info("Threads Launched")
         if self.opts.single:
             self.run_single()
         elif self.opts.jacobian:
@@ -141,7 +143,7 @@ class StarEngine(CLIEngine):
         if self.opts.single_outer:
             ys, ms, data  = self.stars["Surface"][0].retrieve()
             self.log.info("Retrieved Outer Integration")
-        self.dashboard.save()
+        self.dashboard.save("live","Single_Integration.pdf")
             
     def end(self):
         """Things to do at the end of every run!"""

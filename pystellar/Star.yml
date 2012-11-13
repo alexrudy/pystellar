@@ -42,7 +42,7 @@ System:
     Center: 5
   Opacity:
     Snap: true
-    Error: true
+    Error: false
     Timeout: 130
   Threading:
     Timeout: 130
@@ -56,11 +56,19 @@ System:
     PrintOptions:
       precision: 8
       linewidth: 500
+  Matplotlib:
+    text:
+      usetex: false
   NewtonRapson:
-    niters: 100
-    dx: 1e-3
+    niters: 2
+    dx: 1.0e-5
+    tol: 1.0e-7
+    linearSearch:
+      stepmax: 1.0e-8
+      tolX: 1.0e-7
+      alpha: 1.0e-4
   Integrator:
-    LogScae: True
+    LogScae: true
     Method: scipy
     PyStellar:
       Surface:
@@ -77,7 +85,7 @@ System:
           mxstep: 100000
           h0: !!float -1.0e-10
           hmin: !!float 4e-15
-          hmax: !!float 1.0e-3
+          hmax: !!float 1.0e-4
           rtol: !!float 1.0e-9
           atol: !!float 1.0e-9
           mxordn: 5
@@ -102,6 +110,61 @@ System:
           h0: !!float -1.0e23
           hmax: !!float 1.0e30
           hmin: !!float 1.0e14
+Dashboard:
+  Figures:
+    live:
+      active: false
+      layout:
+        - 3
+        - 3
+      size:
+        - 20
+        - 10
+      axes:
+        radius:
+          x: "Mass (g)"
+          y: "Raidus (cm)"
+        luminosity:
+          x: "Mass (g)"
+          y: "Luminosity (ergs/s)"
+        pressure:
+          x: "Mass (g)"
+          y: "Pressure $(Dyne/cm^2)$"
+        temperature:
+          x: "Mass (g)"
+          y: "Temperature (K)"
+        density:
+          x: "Mass (g)"
+          y: "Density $(g/cm^3)$"
+        epsilon:
+          x: "Mass (g)"
+          y: "Energy Generation Rate \epsilon (ergs/g)"
+        gradient:
+          x: "Mass (g)"
+          y: "Temperature Gradient"
+        opacity:
+          x: "Mass (g)"
+          y: "Opacity \\kappa"
+    fitting:
+      layout:
+        - 2
+        - 2
+      size:
+        - 20
+        - 10
+      axes:
+        radius:
+          x: "Step"
+          y: "Raidus (cm)"
+        luminosity:
+          x: "Step"
+          y: "Luminosity (ergs/s)"
+        pressure:
+          x: "Step"
+          y: "Pressure $(Dyne/cm^2)$"
+        temperature:
+          x: "Step"
+          y: "Temperature (K)"
 Logging:
   version: 1
   formatters:
