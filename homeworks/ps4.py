@@ -43,6 +43,7 @@ print u"T    = %g" % T1
 print u"εCNO = %g" % epsilon_CNO1
 print u"εpp  = %g" % epsilon_pp1
 print u"ε    = %g" % (epsilon_pp1 + epsilon_CNO1)
+print u"εpp/εCNO = %g" % (epsilon_pp1/epsilon_CNO1)
 
 
 plt.loglog(T,epsilon_CNO+epsilon_pp,'-',label=r"$\epsilon$")
