@@ -49,9 +49,9 @@ class StarEngine(CLIEngine):
         """Configure the engine"""
         super(StarEngine, self).configure()
         if self.opts.quiet:
-            self.config["Logging.Handlers.console.level"] = logging.WARNING
+            self.config["Logging.handlers.console.level"] = logging.WARNING
         if self.opts.verbose:
-            self.config["Logging.Handlers.console.level"] = logging.DEBUG
+            self.config["Logging.handlers.console.level"] = logging.DEBUG
         logging.captureWarnings(True)
         logging.config.dictConfig(self.config["Logging"])
         
