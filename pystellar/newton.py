@@ -83,7 +83,7 @@ class NRSolver(object):
             self.log.info("Jacobian Calcualtion Evaluated: %s" % ((f[i] - f0)/dy[i]))
             jac[i] = (f[i] - f0)/dy[i]
             
-        return np.matrix(jac),f
+        return np.matrix(jac.T),f
         
     def nrsolve(self):
         """Do the newton-rapson solution"""
@@ -99,16 +99,17 @@ class NRSolver(object):
             jac,fd1 = self.fd_jacobian(y0,f0)
             ff = 0.5 * np.dot(f0,f0)
             self.log.info("Calculated Jacobian at R=%g, L=%g, Pc=%g, Tc=%g" % tuple(y0) )
-            self.log.info("Found Fitting Errors: %r" % f0)
+            self.log.info("Found Fitting Errors: %s" % f0)
             self.append_dashboard(np.array([n]),f0,line="fitting",marker='o')
             self.append_dashboard(np.array([n]),y0,figure="guesses",line="guesses",marker='o')
             if np.max(np.abs(f0)) < tol:
                 converged = True
                 break
-            dy = (jac.I * y0m).getA().T[0]
+            dy = -1*(jac.I * y0m).getA().T[0]
+            dy *= float(self.config["System.NewtonRapson.stepeps"])
             self.log.info("Step Size Required: %s" % dy)
             while (np.abs(dy) > y0 * step_max).any():
-                self.log.warning("Step size is too large! %r" % dy)
+                self.log.warning("Step size is too large! %s" % dy)
                 dy *= step_max/np.sqrt(np.sum(dy**2))
             self.append_dashboard(np.array([n]),dy,figure="adjustments",line="fitting-jac",marker="o")
             self.dashboard.update("fitting","adjustments","guesses")
@@ -138,7 +139,8 @@ class NRSolver(object):
             self.log.error("Roundoff Error in Search: dx=%r f0=%r" % (dx,f0))
         test = np.max(np.abs(dx)/np.max(np.hstack((np.abs(x0),np.ones(x0.shape))),axis=0))
         alam_min = self.config["System.NewtonRapson.linearSearch.tolX"]/test
-        alam1 = 1.0
+        alaminit = 0.6
+        alam1 = alaminit
         converged = False
         convergence_steps = 0
         while not converged:
@@ -147,7 +149,7 @@ class NRSolver(object):
             self.set_guesses(x1,x1.size)
             self.launch(x1.size)
             if alam1 < alam_min:
-                xr = x0
+                xr = x1
                 converged = True
             f1 = self.fitgap(x1.size)
             ff1 = 0.5 * np.dot(f1,f1)
@@ -155,7 +157,7 @@ class NRSolver(object):
                 xr = x1
                 converged = True
             else:
-                if alam1 == 1.0:
+                if alam1 == alaminit:
                     alam0 = - slope / (2.0 * (ff1 - ff0 * slope))
                 else:
                     rhs1 = ff1 - ff0 - alam1 * slope
@@ -167,17 +169,19 @@ class NRSolver(object):
                     else:
                         disc = b**2 - 3 * a * slope
                         if disc < 0.0:
-                            alam0 = 0.5 * alam
+                            alam0 = 0.5 * alam1
                         elif b <= 0.0:
                             alam0 = (- b + np.sqrt(disc))/(3 * a)
                         else:
                             alam0 = -slope/(b + np.sqrt(disc))
                     if alam0 > 0.5 * alam1:
                         alam0 = 0.5 * alam1
-            ff2 = ff1
-            alam2 = alam1
-            alam1 = 0.1 * alam1 if 0.1 * alam1 > alam0 else alam0
-        self.log.info("Linear Search Converged after %d steps on %r" % (convergence_steps,xr))
+            if not converged:
+                ff2 = ff1
+                alam2 = alam1
+                alam1 = 0.1 * alam1 if 0.1 * alam1 > alam0 else alam0
+        self.log.info("Linear Search Converged after %d steps on %s" % (convergence_steps,xr))
+        self.log.info("Final Step Size: %s" % (xr-x0))
         return xr,f1
     
     def append_dashboard(self,x,y,figure='fitting',line=None,**kwargs):
