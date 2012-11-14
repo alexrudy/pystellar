@@ -23,7 +23,7 @@ System:
   Dashboard:
     Update: 0
   NewtonRapson:
-    niters: 1
+    niters: 50
   Integrator:
     Scipy:
       LogSurface:

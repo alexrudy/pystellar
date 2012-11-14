@@ -66,6 +66,7 @@ System:
     dx: 1.0e-5
     tol: 1.0e-7
     stepmax: 10
+    stepeps: 1e-6
     linearSearch:
       stepmax: 10
       tolX: 1.0e-7
