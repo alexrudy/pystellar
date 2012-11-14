@@ -5,7 +5,7 @@ Star:
     Pc: 2.477e17
     Tc: 1.571e7
     dm: 1.0e-10
-    Convective: False
+    Convective: false
   Composition:
     X: 0.70
     Y: 0.28
@@ -22,23 +22,26 @@ Data:
 System:
   Dashboard:
     Update: 0
+  NewtonRapson:
+    niters: 1
   Integrator:
     Scipy:
-      LogOuter:
+      LogSurface:
         Arguments:
           mxstep: 100000
           h0: !!float -1.0e-10
           hmin: !!float 4e-15
-          hmax: !!float 1.0e-3
+          hmax: !!float 1.0e-4
           rtol: !!float 1.0e-9
           atol: !!float 1.0e-9
           mxordn: 5
           mxords: 5
-      LogInner:
+      LogCenter:
         Arguments:
           mxstep: 100000
           h0: !!float 1.0e-8
           hmin: !!float 1.0e-15
           hmax: !!float 1.0e-2
-          rtol: !!float 1.0e-12
+          rtol: !!float 1.0e-9
           atol: !!float 1.0e-20
+      
