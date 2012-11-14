@@ -80,7 +80,6 @@ class NRSolver(object):
             f[i] = self.fitgap(i)
         
         for i in xrange(y0.size):
-            self.log.info("Jacboian Calculation: Delta: %s \nH: %s" % ((f[i] - f0),dy))
             self.log.info("Jacobian Calcualtion Evaluated: %s" % ((f[i] - f0)/dy[i]))
             jac[i] = (f[i] - f0)/dy[i]
             
@@ -107,6 +106,7 @@ class NRSolver(object):
                 converged = True
                 break
             dy = (jac.I * y0m).getA().T[0]
+            self.log.info("Step Size Required: %s" % dy)
             while (np.abs(dy) > y0 * step_max).any():
                 self.log.warning("Step size is too large! %r" % dy)
                 dy *= step_max/np.sqrt(np.sum(dy**2))
