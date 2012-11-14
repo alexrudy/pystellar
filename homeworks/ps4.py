@@ -36,13 +36,13 @@ T1 = 18 * np.power(10,6)
 epsilon_pp1 = epp(T=T1,rho=rho,X=X,c=Config["Data.Energy"])
 epsilon_CNO1 = eCNO(T=T1,rho=rho,X=X,XCNO=XCNO,c=Config["Data.Energy"])
 
-print u"X    = %g" % X
-print u"XCNO = %g" % XCNO
-print u"ρ    = %g" % rho
-print u"T    = %g" % T1
-print u"εCNO = %g" % epsilon_CNO1
-print u"εpp  = %g" % epsilon_pp1
-print u"ε    = %g" % (epsilon_pp1 + epsilon_CNO1)
+print u"X        = %g" % X
+print u"XCNO     = %g" % XCNO
+print u"ρ        = %g" % rho
+print u"T        = %g" % T1
+print u"εCNO     = %g" % epsilon_CNO1
+print u"εpp      = %g" % epsilon_pp1
+print u"ε        = %g" % (epsilon_pp1 + epsilon_CNO1)
 print u"εpp/εCNO = %g" % (epsilon_pp1/epsilon_CNO1)
 
 
