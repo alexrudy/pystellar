@@ -539,7 +539,7 @@ class OpacityTable(object):
             else:
                 inans = np.sum(np.isnan(logT)) + np.sum(np.isnan(logrho))
                 inputs = logT.size + logrho.size
-                self.log.warning("Opacity Table Returned NaNs: Kappas: %d/%d, Inputs: %d/%d" % (knans,kappa.size,inans,inpus))
+                self.log.warning("Opacity Table Returned NaNs: Kappas: %d/%d, Inputs: %d/%d" % (knans,kappa.size,inans,inputs))
             if T is not None and rho is not None:
                 self.log.debug("T: %r Rho: %r" % (T,rho))
         elif knans > 0 and self._warnings["NaNs"] == self._warnings_max:
