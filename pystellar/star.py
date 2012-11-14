@@ -121,7 +121,7 @@ class Star(object):
                 self.log.warning(u"%s y<0 at: \nx=%r, \ny=%r, \ndy=%r, \nρ=%g \nε=%g \n∇=%g \nκ=%g" % (i,x,y,dy,rho,eps,agrad,kappa[0]))
         if update:
             if self._plotting:
-                self.append_dashboard(xs,ys,rho,agrad,kappa,eps,line=integrator+self.name)
+                self.append_dashboard(x,y,rho,agrad,kappa,eps,line=i+self.name)
                 self.dashboard.update("live")
             self.log.info(u"%s %d calls at: \nx=%r, \ny=%r, \ndy=%r, \nρ=%g \nε=%g \n∇=%g \nκ=%g" % (i,self._call_count,x,y,dy,rho,eps,agrad,kappa[0]))
         if telem:
@@ -158,6 +158,7 @@ class Star(object):
         """Run the center integration."""
         self._plotting = plotting
         self.log.debug("Getting Inner Boundaries")
+        self.log.debug("Initially, star has Tc=%g, Pc=%g, M=%g, m=%g, convective=%s" % (self.Tc_Guess,self.Pc_Guess,self.M,self.dm_Guess,self.config["Star.Initial.Convective"]))
         center_ic = inner_boundary(
             Pc=self.Pc_Guess,Tc=self.Tc_Guess,M=self.M,mu=self.mu,m=self.dm_Guess,
             optable=self.opacity,X=self.X,XCNO=self.XCNO,cfg=self.config["Data.Energy"],convective=self.config["Star.Initial.Convective"])
@@ -225,7 +226,7 @@ class Star(object):
         stream.close()
         
         if self._plotting:
-            self.update_dashboard(xs,ys.T,rho,rgrad,kappa,eps,line=integrator+self.name)
+            self.update_dashboard(xs,ys.T,rho,agrad,kappa,eps,line=integrator+self.name)
             self.dashboard.update("live")
         
         self.log.debug("Plotted %s Integration" % integrator)
@@ -237,15 +238,15 @@ class Star(object):
         line = self.name if line is None else line
         
         for yi,name in zip(y,["radius","luminosity","pressure","temperature"]):
-            self.dashboard.update_data(x,yi,figure="live",axes=name,line=line)
+            self.dashboard.update_data(x,yi,figure="live",axes=name,line=line,lw=2.0)
         if rho is not None:
-            self.dashboard.update_data(x,rho,figure="live",axes="density",line=line)
+            self.dashboard.update_data(x,rho,figure="live",axes="density",line=line,lw=2.0)
         if gradient is not None:
-            self.dashboard.update_data(x,gradient,figure="live",axes="gradient",line=line)
+            self.dashboard.update_data(x,gradient,figure="live",axes="gradient",line=line,lw=2.0)
         if kappa is not None:
-            self.dashboard.update_data(x,kappa,figure="live",axes="opacity",line=line)
+            self.dashboard.update_data(x,kappa,figure="live",axes="opacity",line=line,lw=2.0)
         if epsilon is not None:
-            self.dashboard.update_data(x,epsilon,figure="live",axes="epsilon",line=line)
+            self.dashboard.update_data(x,epsilon,figure="live",axes="epsilon",line=line,lw=2.0)
         
     def append_dashboard(self,x,y,rho=None,gradient=None,kappa=None,epsilon=None,line=None):
         """Append data to the dashboard"""
