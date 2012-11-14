@@ -47,6 +47,7 @@ class Dashboard(object):
             for n,axes in enumerate(self.config["Dashboard.Figures"][figure]["axes"]):
                 nn = self.config["Dashboard.Figures"][figure]["axes"][axes].get("n",n+1)
                 self.axes[figure][axes] = self.figures[figure].add_subplot(x_sub,y_sub,nn)
+                self.axes[figure][axes].margins(0.05)
                 self.axes[figure][axes].set_xlabel(self.config["Dashboard.Figures"][figure]["axes"][axes]["x"])
                 self.axes[figure][axes].set_ylabel(self.config["Dashboard.Figures"][figure]["axes"][axes]["y"])
                 self.lines[figure][axes] = {}
