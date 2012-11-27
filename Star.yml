@@ -1,47 +1,45 @@
+# ADJUSTMENTS TO DEFAULT VALUES
 Star:
   Initial:
-    Ls: 1.0 #units of solar luminosity
-    Rs: 1.0 #units of solar radius
-    Pc: 2.477e17
-    Tc: 1.571e7
-    dm: 1.0e-10
+    Rs: 1.3
+    Ls: 0.65
     Convective: false
-  Composition:
-    X: 0.70
-    Y: 0.28
-    dXc: 0.0
-    dXo: 0.0
-    ZdXCNO: 0.7
-  Properties:
-    M: 1.0 #units of solar mass
   Integration:
     fp: 0.5
-Data:
-  Opacity:
-    Config: GN93hz
 System:
   Dashboard:
     Update: 0
   NewtonRapson:
-    niters: 50
+    # niters: 10
+    stepeps: 0.5
+    tol: 1.0e-6
   Integrator:
+    PyStellar:
+      LogSurface:
+        Arguments:
+          mxstep: 100000
+          h0: !!float -1.0e-8
+          tol: !!float 1.0e-9
+      LogCenter:
+        Arguments:
+          mxstep: 100000
+          h0: !!float 0.5
+          tol: !!float 1.0e4
     Scipy:
       LogSurface:
         Arguments:
           mxstep: 100000
           h0: !!float -1.0e-10
           hmin: !!float 4e-15
-          hmax: !!float 1.0e-4
+          hmax: !!float 0.5
           rtol: !!float 1.0e-9
-          atol: !!float 1.0e-9
-          mxordn: 5
-          mxords: 5
+          # atol: !!float 0.0
       LogCenter:
         Arguments:
           mxstep: 100000
           h0: !!float 1.0e-8
           hmin: !!float 1.0e-15
-          hmax: !!float 1.0e-2
+          hmax: !!float 1.0e-1
           rtol: !!float 1.0e-9
           atol: !!float 1.0e-20
       
