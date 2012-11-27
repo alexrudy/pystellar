@@ -13,6 +13,7 @@
 """
 from __future__ import division
 import numpy as np
+from scipy.interpolate import interp1d
 
 c1,   c2,   c3,  c4,  c5,  c6 =           0,           1/4.,          3/8.,           12/13.,            1.,        1/2.
 a21,                          =        1/4.,
@@ -51,19 +52,41 @@ def step_adapt(f,x,y,h,args=(),tol=1e-8):
     return ystep,hn
     
     
-def integrate(fprime,x,y0,h0,args=(),tol=1e-8):
+def integrate(fprime,x,y0,h0,args=(),tol=1e-8,mxstep=10000):
     """Integrator!"""
+    data = {}
     x = np.asarray(x)
     y0 = np.asarray(y0)
-    y = np.array((x.shape[0],y0.shape[0]))
+    nv = y0.shape[0] # Number of variables at each y
+    no = x.shape[0] # Number of time steps
+    y = np.empty((no,nv))
     hc = h0
     xc = x[0]
     xn = xc
     yc = y0
-    while (xc-x[-1])/(x[-1]-x[0]) <= 0:
+    yo = np.empty((mxstep,nv))
+    xo = np.empty((mxstep))
+    ho = np.empty((mxstep))
+    i = 0
+    while (xc-x[-1])/(x[-1]-x[0]) <= 0 and i < mxstep:
+        i += 1
         xn += hc
         yc,hc = step_adapt(fprime,xc,yc,hc,args=args,tol=tol)
+        xo[i] = xc
+        yo[i] = yc
+        ho[i] = hc
         xc = xn
-        # y[x == xc] = yc
-    return x,y,xc,yc
+        print hc
+        
+    yo = yo[:i]
+    xo = xo[:i]
+    ho = ho[:i]
+    data['hu'] = ho
+    
+    
+    y = interp1d(xo,yo,axis=0,fill_value=np.nan)(x)
+    
+    
+    
+    return y, data
     
