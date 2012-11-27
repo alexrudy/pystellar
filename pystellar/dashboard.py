@@ -39,17 +39,28 @@ class Dashboard(object):
     def create_dashboard(self):
         """Create the correct items for dashboards."""
         for figure in self.config["Dashboard.Figures"]:
-            x_sub, y_sub = self.config["Dashboard.Figures"][figure]["layout"]
+            y_sub, x_sub = self.config["Dashboard.Figures"][figure]["layout"]
             self.figures[figure] = self.plt.figure(figsize=tuple(self.config["Dashboard.Figures"][figure]["size"]))
             self.figures[figure].suptitle(self.config["Dashboard.Figures"][figure].get("title",figure))
             self.axes[figure] = {}
             self.lines[figure] = {}
             for n,axes in enumerate(self.config["Dashboard.Figures"][figure]["axes"]):
                 nn = self.config["Dashboard.Figures"][figure]["axes"][axes].get("n",n+1)
-                self.axes[figure][axes] = self.figures[figure].add_subplot(x_sub,y_sub,nn)
+                x_sub_n = self.config["Dashboard.Figures"][figure]["axes"][axes].get("sub.x",x_sub)
+                y_sub_n = self.config["Dashboard.Figures"][figure]["axes"][axes].get("sub.y",y_sub)
+                sharex = self.config["Dashboard.Figures"][figure]["axes"][axes].get("sharex",False)
+                if sharex and len(self.axes[figure]) > 0:
+                    sharex_ax = self.axes[figure].values()[0]
+                    self.axes[figure][axes] = self.plt.subplot(y_sub_n,x_sub_n,nn,sharex=sharex_ax)
+                else:
+                    self.axes[figure][axes] = self.figures[figure].add_subplot(y_sub_n,x_sub_n,nn)
                 self.axes[figure][axes].margins(0.05)
-                self.axes[figure][axes].set_xlabel(self.config["Dashboard.Figures"][figure]["axes"][axes]["x"])
-                self.axes[figure][axes].set_ylabel(self.config["Dashboard.Figures"][figure]["axes"][axes]["y"])
+                if "x" in self.config["Dashboard.Figures"][figure]["axes"][axes]:
+                    self.axes[figure][axes].set_xlabel(self.config["Dashboard.Figures"][figure]["axes"][axes]["x"])
+                if "y" in self.config["Dashboard.Figures"][figure]["axes"][axes]:
+                    self.axes[figure][axes].set_ylabel(self.config["Dashboard.Figures"][figure]["axes"][axes]["y"])
+                if "title" in self.config["Dashboard.Figures"][figure]["axes"][axes]:
+                    self.axes[figure][axes].set_title(self.config["Dashboard.Figures"][figure]["axes"][axes]["title"])
                 self.lines[figure][axes] = {}
             if self.config["Dashboard.Figures"][figure].get("active",True):
                 self.active_figures += [figure]
@@ -69,12 +80,21 @@ class Dashboard(object):
         
     def update_data(self,x,y,figure,axes,line,**kwargs):
         """Update an existing line's data to be the new data passed in."""
+        if x.shape != y.shape:
+            self.log.critical("x,y: %s, %s" % (x,y))
+            self.log.critical("x,y dimension mismatch: %s:%s:%s" % (figure,axes,line))
+            raise ValueError("x,y dimension mismatch: %s:%s:%s" % (figure,axes,line))
+        
         if line not in self.lines[figure][axes]:
             self.add_data(x,y,figure,axes,line,**kwargs)
         self.lines[figure][axes][line].set_data(x,y)
         
     def append_data(self,x,y,figure,axes,line,**kwargs):
         """Append data to an existing line."""
+        if x.shape != y.shape:
+            self.log.critical("x,y: %s, %s" % (x,y))
+            self.log.critical("x,y dimension mismatch: %s:%s:%s" % (figure,axes,line))
+            raise ValueError("x,y dimension mismatch: %s:%s:%s" % (figure,axes,line))
         if line not in self.lines[figure][axes]:
             self.add_data(x,y,figure,axes,line,**kwargs)
         data_x,data_y = self.lines[figure][axes][line].get_data()

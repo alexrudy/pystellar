@@ -46,35 +46,44 @@ System:
     Timeout: 130
     Warnings: 100
   Threading:
-    Timeout: 130
+    Timeout: 3000
   Outputs:
     Size: 500
-    Update: 100
+    Update: 0
+    Data:
+      Integration: data/%(integrator)s-star.dat
+      FittingPoint: data/fitting-points.dat
+      Guesses: data/guess-values.dat
+      Convergence: data/convergence-parameters.dat
+      Deltas: data/guess-movements.dat
   Dashboard:
     Update: 0
     Timeout: 300
   Numpy:
     PrintOptions:
-      precision: 8
+      precision: 4
       linewidth: 500
   Matplotlib:
     text:
       usetex: false
   NewtonRapson:
     Timeout: 3000
-    niters: 10
-    dx: 1.0e-5
-    tol: 1.0e-7
-    stepmax: 10
-    stepeps: 1e-6
+    file: BestGuess.npy
+    niters: 1000
+    tol: 1.0e-6
+    stepmax: 1
+    stepeps: 1
+    maxfiterr: 10
+    Jac:
+      dx: 1.0e-6
+      maxdepth: 3
     linearSearch:
-      stepmax: 10
+      stepmax: 1
       tolX: 1.0e-7
       alpha: 1.0e-4
   Integrator:
     Warnings: 10
     LogScae: true
-    Method: scipy
     PyStellar:
       Surface:
         Arguments:
@@ -117,6 +126,58 @@ System:
           hmin: !!float 1.0e14
 Dashboard:
   Figures:
+    integration:
+      active: true
+      title: Star Integration
+      layout:
+        - 2
+        - 2
+      size:
+        - 12
+        - 8
+      axes:
+        radius:
+          n: 1
+          # x: "Mass (g)"
+          y: "Raidus (cm)"
+        luminosity:
+          n: 2
+          # x: "Mass (g)"
+          y: "Luminosity (ergs/s)"
+        pressure:
+          n: 3
+          x: "Mass (g)"
+          y: "Pressure $(Dyne/cm^2)$"
+        temperature:
+          n: 4
+          x: "Mass (g)"
+          y: "Temperature (K)"
+    integrationextras:
+      active: true
+      title: Star Integration Extras
+      layout:
+        - 2
+        - 2
+      size:
+        - 12
+        - 8
+      axes:
+        density:
+          n: 1
+          # x: "Mass (g)"
+          y: "Density $(g/cm^3)$"
+        epsilon:
+          n: 2
+          # x: "Mass (g)"
+          y: "$\\epsilon$ (ergs/g)"
+        gradient:
+          n: 3
+          x: "Mass (g)"
+          y: "Temperature Gradient"
+        opacity:
+          n: 4
+          x: "Mass (g)"
+          y: "Opacity $\\kappa$"
     live:
       active: true
       title: Star Integration
@@ -124,8 +185,8 @@ Dashboard:
         - 3
         - 3
       size:
-        - 20
-        - 10
+        - 12
+        - 8
       axes:
         radius:
           n: 1
@@ -162,44 +223,47 @@ Dashboard:
     fitting:
       title: Fitting Point Errors
       layout:
-        - 2
+        - 3
         - 2
       size:
-        - 20
-        - 10
+        - 12
+        - 8
       axes:
         radius:
           n: 1
-          x: "Step"
-          y: "Raidus (cm)"
+          y: "$\\Delta$ Raidus (cm)"
         luminosity:
           n: 2
-          x: "Step"
-          y: "Luminosity (ergs/s)"
+          y: "$\\Delta$ Luminosity (ergs/s)"
         pressure:
           n: 3
           x: "Step"
-          y: "Pressure $(Dyne/cm^2)$"
+          y: "$\\Delta$ Pressure $(Dyne/cm^2)$"
         temperature:
           n: 4
           x: "Step"
-          y: "Temperature (K)"
+          y: "$\\Delta$ Temperature (K)"
+        ffpoint:
+          n: 3
+          sub:
+            x: 1
+            y: 3
+          x: "Step"
+          y: "Convergence Parameter"
     adjustments:
       title: Guess Adjustments
       layout:
         - 2
         - 2
       size:
-        - 20
-        - 10
+        - 12
+        - 6
       axes:
         radius:
           n: 1
-          x: "Step"
           y: "Raidus (cm)"
         luminosity:
           n: 2
-          x: "Step"
           y: "Luminosity (ergs/s)"
         pressure:
           n: 3
@@ -215,16 +279,14 @@ Dashboard:
         - 2
         - 2
       size:
-        - 20
-        - 10
+        - 12
+        - 6
       axes:
         radius:
           n: 1
-          x: "Step"
           y: "Raidus (cm)"
         luminosity:
           n: 2
-          x: "Step"
           y: "Luminosity (ergs/s)"
         pressure:
           n: 3
@@ -234,7 +296,7 @@ Dashboard:
           n: 4
           x: "Step"
           y: "Temperature (K)"
-Logging:
+logging:
   version: 1
   formatters:
     stdout:
@@ -295,20 +357,29 @@ Logging:
       handlers:
         - console
         - file
+    pystellar.opacity:
+      level: DEBUG
+      handlers:
+        - file
+      propagate: false
+    pystellar.star:
+      level: DEBUG
+      handlers:
+        - file
+      propagate: false
     telemetry:
       level: DEBUG
       handlers:
         - telemetry
-      propagate: 0
+      propagate: false
     data:
       level: INFO
       handlers:
         - data
-      propagate: 0
+      propagate: false
     py.warnings:
       handlers:
         - warnings
-        - console
     pyshell:
       hanlders:
         - libraries
