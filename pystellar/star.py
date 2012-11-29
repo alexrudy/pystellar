@@ -178,7 +178,7 @@ class Star(object):
     def surface(self,plotting=True):
         """Run an integration from the surface to the inner edge"""
         self._plotting = plotting
-        self.log.debug("Getting Inner Boundaries")
+        self.log.debug("Getting Outer Boundaries")
         outer_ic = outer_boundary(R=self.R_Guess,L=self.L_Guess,M=self.M,mu=self.mu,optable=self.opacity)
         (r,l,P,T) = outer_ic
         
@@ -196,18 +196,8 @@ class Star(object):
     
     def pystellar(self,xs,ics,integrator):
         """Run an integration from the central point to the outer edge."""
-        xs,ys,xc,yc = integrate(self.integral,xs,ics,args=(integrator,),**self.config["System.Integrator.PyStellar"][integrator]["Arguments"])
+        ys, data = integrate(self.integral,xs,ics,args=(integrator,),**self.config["System.Integrator.PyStellar"][integrator]["Arguments"])
         self.log.debug("Finished %s Integration" % integrator)
-        return ys, xs, None
-        
-    def scipy(self,xs,ics,integrator):
-        """Run an integration from the central point to the outer edge."""
-        self.log.debug("Calling %s Scipy Integration" % integrator)
-        import scipy.integrate
-        ys, data = scipy.integrate.odeint(self.integral,ics,xs,args=(integrator,),
-            full_output=True,**self.config["System.Integrator.Scipy"][integrator]["Arguments"])
-        self.log.info("Finished %s Integration: %d timesteps, %d function calls for each timestep." % (integrator,data["nst"][-1],data["nfe"][-1]))
-        
         if self._logmode:
             xs = np.power(10,xs)
         
@@ -220,48 +210,90 @@ class Star(object):
         kappa = self.opacity.retrieve()
         
         all_data = np.vstack(map(np.atleast_2d,(xs,ys.T,rho,eps,rgrad,agrad,kappa))).T
+        np.savetxt(self.config["System.Outputs.Data.Integration"] % {'integrator':integrator},all_data)
+        
+        if self._plotting and np.isfinite(all_data).all():
+            self.update_dashboard(xs,ys.T,rho,agrad,kappa,eps,line=integrator+self.name,figure='split')
+            self.dashboard.update("integration","integrationextras")
+        elif not np.isfinite(all_data).all():
+            self.log.debug("Skipping integration plots due to non-finite data.")
+        
+        self.log.debug("Plotted %s Integration" % integrator)
+        return ys, xs, data
+        
+    def scipy(self,xs,ics,integrator):
+        """Run an integration from the central point to the outer edge."""
+        self.log.debug("Calling %s Scipy Integration" % integrator)
+        import scipy.integrate
+        ys, data = scipy.integrate.odeint(self.integral,ics,xs,args=(integrator,),
+            full_output=True,**self.config["System.Integrator.Scipy"][integrator]["Arguments"])
+        self.log.info("Finished %s Integration: %d timesteps, %d function calls." % (integrator,data["nst"][-1],data["nfe"][-1]))
+        
+        derivs = self.fprime(xs=xs,ys=ys,mu=self.mu,optable=self.opacity,X=self.X,XCNO=self.Z,cfg=self.config["Data.Energy"])
+        
+        if self._logmode:
+            xs = np.power(10,xs)
+        
+        rho = density(P=ys[:,2],T=ys[:,3],mu=self.mu)
+        eps = dldm(T=ys[:,3],rho=rho,X=self.X,XCNO=self.XCNO,cfg=self.config["Data.Energy"])
+        self.opacity.kappa(T=ys[:,3],rho=rho)
+        rgrad = radiative_gradient(T=ys[:,3],P=ys[:,2],l=ys[:,1],m=xs,rho=rho,optable=self.opacity)
+        agrad = grad(rgrad)
+        self.opacity.kappa(T=ys[:,3],rho=rho)
+        kappa = self.opacity.retrieve()
+        all_data = np.vstack(map(np.atleast_2d,(xs,ys.T,derivs,rho,eps,rgrad,agrad,kappa))).T
         stream = StringIO()
         np.savetxt(stream,all_data)
         self.data_log.info(stream.getvalue())
         stream.close()
         
         if self._plotting:
-            self.update_dashboard(xs,ys.T,rho,agrad,kappa,eps,line=integrator+self.name)
-            self.dashboard.update("live")
+            self.update_dashboard(xs,ys.T,rho,agrad,kappa,eps,line=integrator+self.name,figure='split')
+            self.dashboard.update("integration","integrationextras")
+        elif np.isnan(all_data).any():
+            self.log.debug("Skipping integration plots due to non-finite data.")
         
         self.log.debug("Plotted %s Integration" % integrator)
         return ys, xs, data
     
     
-    def update_dashboard(self,x,y,rho=None,gradient=None,kappa=None,epsilon=None,line=None):
+    def update_dashboard(self,x,y,rho=None,gradient=None,kappa=None,epsilon=None,line=None,figure='live'):
         """A wrapper to perform dashboard updates."""
         line = self.name if line is None else line
-        
+        if figure == 'split':
+            mfig = 'integration'
+            ofig = 'integrationextras'
+        else:
+            mfig,ofig = figure,figure
         for yi,name in zip(y,["radius","luminosity","pressure","temperature"]):
-            self.dashboard.update_data(x,yi,figure="live",axes=name,line=line,lw=2.0)
+            self.dashboard.update_data(x,yi,figure=mfig,axes=name,line=line,lw=2.0)
         if rho is not None:
-            self.dashboard.update_data(x,rho,figure="live",axes="density",line=line,lw=2.0)
+            self.dashboard.update_data(x,rho,figure=ofig,axes="density",line=line,lw=2.0)
         if gradient is not None:
-            self.dashboard.update_data(x,gradient,figure="live",axes="gradient",line=line,lw=2.0)
+            self.dashboard.update_data(x,gradient,figure=ofig,axes="gradient",line=line,lw=2.0)
         if kappa is not None:
-            self.dashboard.update_data(x,kappa,figure="live",axes="opacity",line=line,lw=2.0)
+            self.dashboard.update_data(x,kappa,figure=ofig,axes="opacity",line=line,lw=2.0)
         if epsilon is not None:
-            self.dashboard.update_data(x,epsilon,figure="live",axes="epsilon",line=line,lw=2.0)
+            self.dashboard.update_data(x,epsilon,figure=ofig,axes="epsilon",line=line,lw=2.0)
         
-    def append_dashboard(self,x,y,rho=None,gradient=None,kappa=None,epsilon=None,line=None):
+    def append_dashboard(self,x,y,rho=None,gradient=None,kappa=None,epsilon=None,line=None,figure='live'):
         """Append data to the dashboard"""
         line = self.name if line is None else line
-        
+        if figure == 'split':
+            mfig = 'integration'
+            ofig = 'integrationextras'
+        else:
+            mfig,ofig = figure,figure
         for yi,name in zip(y,["radius","luminosity","pressure","temperature"]):
-            self.dashboard.append_data(x,yi,figure="live",axes=name,line=line)
+            self.dashboard.append_data(x,yi,figure=mfig,axes=name,line=line)
         if rho is not None:
-            self.dashboard.append_data(x,rho,figure="live",axes="density",line=line)
+            self.dashboard.append_data(x,rho,figure=ofig,axes="density",line=line)
         if gradient is not None:
-            self.dashboard.append_data(x,gradient,figure="live",axes="gradient",line=line)
+            self.dashboard.append_data(x,gradient,figure=ofig,axes="gradient",line=line)
         if kappa is not None:
-            self.dashboard.append_data(x,kappa,figure="live",axes="opacity",line=line)
+            self.dashboard.append_data(x,kappa,figure=ofig,axes="opacity",line=line)
         if epsilon is not None:
-            self.dashboard.append_data(x,epsilon,figure="live",axes="epsilon",line=line)
+            self.dashboard.append_data(x,epsilon,figure=ofig,axes="epsilon",line=line)
     
     @property
     def dashboard(self):
