@@ -1,0 +1,18 @@
+# ADJUSTMENTS TO DEFAULT VALUES
+Star:
+  Initial:
+    Rs: 10
+    Ls: 8
+    Tc: 1.5e8
+    Pc: 1.5e16
+    Convective: false
+  Integration:
+    fp: 0.5
+  Properties:
+    M: 15.0
+System:
+  Dashboard:
+    Update: 0
+  NewtonRapson:
+    maxfiterr: 1.0e30
+      
