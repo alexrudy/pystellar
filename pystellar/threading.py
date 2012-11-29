@@ -47,7 +47,7 @@ from multiprocessing import Queue, Process, Pool, Manager, Event, Lock, cpu_coun
 from Queue import Empty as QEmpty, Full as QFull
 import logging
 # Alex's modules
-from AstroObject.config import DottedConfiguration
+from pyshell.config import DottedConfiguration
 
 # Internal Modules
 from .errors import CodedError
