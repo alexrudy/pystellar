@@ -18,6 +18,7 @@ import time
 import numpy as np
 
 from pyshell.base import CLIEngine
+from pyshell.config import DottedConfiguration
 from textwrap import fill
 
 
@@ -53,7 +54,8 @@ class StarEngine(CLIEngine):
         if self.opts.verbose:
             self.config["Logging.handlers.console.level"] = logging.DEBUG
         logging.captureWarnings(True)
-        logging.config.dictConfig(self.config["Logging"])
+        logging.config.dictConfig(self.config["logging"].store)
+        self._config.dn = DottedConfiguration
         
     def parse(self):
         """Parse arguments which directly control the system."""
@@ -71,16 +73,17 @@ class StarEngine(CLIEngine):
             dest='integrator', const='pystellar', default='scipy', help="Use the custom integrator, not the scipy integrator.")
         self._parser.add_argument('--linear', action='store_false', 
             dest='logmode', help="Disable the logarithmic mass variable")
-        self._parser.add_argument('--jac', action='store_true', 
-            dest='jacobian', help="Do the jacobian")
+        self._parser.add_argument('--continue', action='store_true', 
+            dest='cont', help="Continue from where we last left off.")
         
         super(StarEngine, self).parse()
         self.opts.single_inner |= self.opts.single
         self.opts.single_outer |= self.opts.single
         self.opts.single = self.opts.single or self.opts.single_inner or self.opts.single_outer or self.opts.inner_ic or self.opts.outer_ic
         self.config.setdefault("System.Integrator.Method",self.opts.integrator)
-        if self.opts.single:
-            self.config["Dashboard.Figures.live.active"] = True
+        self.config.setdefault("System.Integrator.LogScale",self.opts.logmode)
+        self.config.setdefault("System.NewtonRapson.continue",self.opts.cont)
+        self.config.setdefault("Dashboard.Figures.live.active",self.opts.single)
         
     def start(self):
         """Start the engine!"""
@@ -97,7 +100,7 @@ class StarEngine(CLIEngine):
         self.log.info("Threads Launched")
         if self.opts.single:
             self.run_single()
-        elif self.opts.jacobian:
+        else:
             self.threads["newton"].nrsolve()
             self.threads["newton"].release()
         
