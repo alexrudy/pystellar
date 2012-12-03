@@ -111,7 +111,12 @@ class StarEngine(CLIEngine):
         
     def star_threads(self):
         """Launch the star threads"""
-        optable_args = self._threads["opacity"].duplicator
+        use_opacity_thread = self.config.get("System.Opacity.Thread",True)
+        
+        if use_opacity_thread:
+            optable_args = self._threads["opacity"].duplicator
+        else:
+            optable_args = None
         dashboard_args = self._threads["dashboard"].duplicator
         for star in self.config["System.Stars"]:
             self.stars[star] = []

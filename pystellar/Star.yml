@@ -46,6 +46,7 @@ System:
     Surface: 5
     Center: 5
   Opacity:
+    Thread: false
     Snap: true
     Error: false
     Timeout: 130
