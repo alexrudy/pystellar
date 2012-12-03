@@ -17,3 +17,8 @@ paper/*.log
 paper/*.gz
 paper/*.toc
 paper/*.lot
+paper/*.out
+paper/compare.tex
+paper/fittingpoint.tex
+paper/guesses.tex
+paper/macros.tex
