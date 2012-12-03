@@ -75,6 +75,8 @@ class StarEngine(CLIEngine):
             dest='logmode', help="Disable the logarithmic mass variable")
         self._parser.add_argument('--continue', action='store_true', 
             dest='cont', help="Continue from where we last left off.")
+        self._parser.add_argument('--latex', action='store_true',dest='latex',help="Produce LaTeX output")
+        self._parser.add_argument('--lastrun',action='store_true',dest='skip',help="Use data from the last run, don't perform integrations.")
         
         super(StarEngine, self).parse()
         self.opts.single_inner |= self.opts.single
@@ -86,7 +88,7 @@ class StarEngine(CLIEngine):
         self.config.setdefault("Dashboard.Figures.live.active",self.opts.single)
         
     def start(self):
-        """Start the engine!"""
+        """Start the engine!"""            
         self._start_time = time.clock()
         self._threads["master"] = Star(config=self.config.store)
         self.stars["master"] = [self.threads["master"]]
@@ -94,11 +96,14 @@ class StarEngine(CLIEngine):
         self._threads["dashboard"] = ObjectThread(Dashboard,iargs=(self.config,),timeout=self.config["System.Dashboard.Timeout"],locking=False)
         self._threads["dashboard"].start()
         self._threads["dashboard"].create_dashboard()
+        
         self.star_threads()
         self._threads["newton"] = ObjectThread(NRSolver,ikwargs=dict(stars=self.stars,config=self.config,dashboard=self.threads["dashboard"]),timeout=self.config["System.NewtonRapson.Timeout"],locking=True)
         self._threads["newton"].start()
         self.log.info("Threads Launched")
-        if self.opts.single:
+        if self.opts.skip:
+            pass
+        elif self.opts.single:
             self.run_single()
         else:
             self.threads["newton"].nrsolve()
@@ -119,6 +124,7 @@ class StarEngine(CLIEngine):
                 self.threads[star_thread_name] = star_thread 
                 star_thread.start()
     
+        
     
     def run_single(self):
         """Operate a Single Integrator"""
@@ -146,19 +152,28 @@ class StarEngine(CLIEngine):
         if self.opts.single_outer:
             ys, ms, data  = self.stars["Surface"][0].retrieve()
             self.log.info("Retrieved Outer Integration")
-        self.dashboard.save("live","Single_Integration.pdf")
+        self.dashboard.save("live","Single-Integration.pdf")
+        self.dashboard.save("integration","single-integration.pdf")
+        self.dashboard.save("integrationextras","single-integration-extra.pdf")
+        
+        
             
     def end(self):
         """Things to do at the end of every run!"""
 
         total_time = time.clock()-self._start_time
         self.log.info("Total time taken: %fs" % total_time)
+        if self.opts.latex:
+            self.threads["newton"].latexoutput()
+            self.threads["newton"].release()
+            
         for thread in self.threads:
             if thread is not "dashboard":
                 self.threads[thread].stop()
         raw_input("To End the Program, press [enter]...\n")
         self.log.info("Ending Dashboard Process")
         self.dashboard.stop()
+
         
     @property
     def threads(self):

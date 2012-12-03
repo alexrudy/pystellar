@@ -17,6 +17,11 @@ Star:
   Integration:
     fp: 0.5
 Data:
+  ZAMS:
+    R: 6.93
+    L: -0.042
+    T: 14.42
+    P: 17.17
   Opacity:
     Config: GN93hz
   Energy:
@@ -56,6 +61,11 @@ System:
       Guesses: data/guess-values.dat
       Convergence: data/convergence-parameters.dat
       Deltas: data/guess-movements.dat
+    LaTeX:
+      Guesses: paper/guesses.tex
+      FittingPoint: paper/fittingpoint.tex
+      macros: paper/macros.tex
+      Compare: paper/compare.tex
   Dashboard:
     Update: 0
     Timeout: 300

@@ -49,7 +49,7 @@ def dPdm(r,m):
     ur"""Find the derivative of the pressure with respect to mass.
     
     .. math::
-        \frac{dP}{dm} = -\frac{Gm}{4\pi r^2}
+        \frac{dP}{dm} = -\frac{Gm}{4\pi r^4}
         
     :param r: Radius enclosed
     :param m: Mass enclosed

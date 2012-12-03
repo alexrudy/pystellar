@@ -90,8 +90,9 @@ class NRSolver(object):
             f[i] = self.fitgap(i)
         
         for i in xrange(y0.size):
-            self.log.debug("Jacobian Calcualtion Evaluated: %s" % ((f[i] - f0)/dy[i]))
             jac[i] = (f[i] - f0)/dy[i]
+            self.log.debug("Jacobian Calcualtion Evaluated: %s" % (jac[i]))
+            
             
         if np.isfinite(jac).all():
             return np.matrix(jac.T),f
@@ -270,6 +271,33 @@ class NRSolver(object):
         self.log.info("Final Step Size: %s" % (xr-x0))
         self.log.debug("Final Lambda Size: %g" % alam1)
         return xr,f1
+    
+    def latexoutput(self):
+        """Convert the last saved output to a handy LaTeX table"""
+        fs = np.loadtxt(self.config["System.Outputs.Data.FittingPoint"])
+        ys = np.loadtxt(self.config["System.Outputs.Data.Guesses"])
+        cs = np.loadtxt(self.config["System.Outputs.Data.Convergence"])
+        ds = np.loadtxt(self.config["System.Outputs.Data.Deltas"])
+        from astropysics.constants import Lsun
+        zs = np.array([ self.config["Data.ZAMS.R"] * 10e10, np.power(10,self.config["Data.ZAMS.L"]) * Lsun, np.power(10,self.config["Data.ZAMS.P"]), self.config["Data.ZAMS.T"] * 10e5 ])
+        
+        from .results import guess_table, fp_table, macros, compare
+        
+        guesstab =  guess_table(ys[0],ys[-1])
+        fptab =  fp_table(fs[0],fs[-1],cs[0],cs[-1])
+        comptab = compare(ys[-1],zs)
+        
+        with open(self.config["System.Outputs.LaTeX.Guesses"],'w') as stream:
+            stream.write(guesstab)
+        with open(self.config["System.Outputs.LaTeX.FittingPoint"],'w') as stream:
+            stream.write(fptab)
+        with open(self.config["System.Outputs.LaTeX.Compare"],'w') as stream:
+            stream.write(comptab)
+        with open(self.config["System.Outputs.LaTeX.macros"],'w') as stream:
+            stream.write(macros(self.config))
+            
+            
+        
     
     def append_dashboard(self,x,y,figure='fitting',line=None,**kwargs):
         """Append data to the dashboard"""
