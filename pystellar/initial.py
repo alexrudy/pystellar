@@ -247,7 +247,10 @@ def outer_pressure_cost(P,R,T,M,mu,optable):
     rho = density(P=P,T=T,mu=mu)
     optable.kappa(T=T,rho=rho)
     Pout = outer_pressure(R=R,M=M,kappa=optable.retrieve())
-    return np.abs(Pout - P)
+    diff = np.abs(Pout - P)
+    if not np.isfinite(diff):
+        diff = 10e10
+    return diff
     
 def outer_temperature(R,L):
     r"""Outer temperature at the boundary condition
