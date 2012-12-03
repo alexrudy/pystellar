@@ -154,9 +154,7 @@ class NRSolver(object):
             for i in range(ny):
                 self.dashboard.append_data(np.array([n]),np.array([c0[i]]),figure='fitting',axes='ffpoint',
                     line='ffpoint-%d' % i,method='semilogy',marker='o')
-            if np.max(c0) < tol:
-                converged = True
-                break
+
             
             # Matrix Math
             f0m = np.matrix(f0).T
@@ -164,6 +162,9 @@ class NRSolver(object):
             dy *= float(self.config["System.NewtonRapson.stepeps"])
             
             ds[n] = dy
+            if np.max(c0) < tol:
+                converged = True
+                break
             self.append_dashboard(np.array([n]),dy,figure="adjustments",line="fitting-jac",marker="o")
             self.log.info("Full Step Size (dr,dl,dP,dT)=[%.4g, %.4g, %.4g, %.4g]" % tuple(dy))
             
@@ -175,10 +176,10 @@ class NRSolver(object):
             self.dashboard.update("fitting","adjustments","guesses")
             
         
-        fs = fs[:n]
-        ys = ys[:n]
-        cs = cs[:n]
-        ds = ds[:n]
+        fs = fs[:n+1]
+        ys = ys[:n+1]
+        cs = cs[:n+1]
+        ds = ds[:n+1]
         
         if converged:
             self.log.info("CONVERGENCE!! after %d iterations" % n)
@@ -230,8 +231,11 @@ class NRSolver(object):
             f1 = self.fitgap(x1.size)
             ff1 = 0.5 * np.dot(f1,f1)
             if not np.isfinite(f1).all():
-                alam0 = 0.9 * alam1
-                self.log.warning("Non-finite integration failure in linear search")
+                alam0 = alam1 - 0.1
+                if alam1 < alam_min:
+                    alam0 = 0.9 * alam1
+                alaminit = alam0
+                self.log.warning("Non-finite integration failure in linear search: alam = %f" % alam1)
                 self.log.debug("Moving due to integration failure: %g -> %g" % (alam1,alam0))
             elif not converged and ff1 < ff0 + alpha * alam1 * slope:
                 self.log.debug("Converged because ff %g < %g ff+alpha+lambda+slope (%g, %g, %g, %g)" % (ff1,ff0 + alpha * alam1 * slope,ff0,alpha,alam1,slope))
@@ -264,7 +268,8 @@ class NRSolver(object):
                         self.log.debug("Ensuring that we don't move by more than 0.5: %g -> %g" % (alam1,alam0))
                         alam0 = 0.5 * alam1
             if not converged:
-                ff2 = ff1
+                if np.isfinite(ff1):
+                    ff2 = ff1
                 alam2 = alam1
                 alam1 = 0.1 * alam1 if 0.1 * alam1 > alam0 else alam0
         self.log.info("Linear Search Converged after %d steps on %s" % (convergence_steps,xr))
