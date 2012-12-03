@@ -9,3 +9,11 @@ docs/_build/*
 Logs/*
 data/star*.dat
 data/*.dat
+paper/*.aux
+paper/*.bbl
+paper/*.blg
+paper/*.lof
+paper/*.log
+paper/*.gz
+paper/*.toc
+paper/*.lot

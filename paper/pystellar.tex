@@ -1,0 +1,440 @@
+%!TEX TS-program = pdfLaTeX
+\documentclass[12pt]{article}
+%--- PACKAGES ---
+
+% Mathematics and Symbols
+\usepackage{amsmath} 
+\usepackage{amssymb}
+\usepackage{aas_macros}
+
+% Paper Geometry
+\usepackage{geometry} 
+\geometry{letterpaper} %Paper Size
+\usepackage{fancyhdr}
+%\usepackage{lscape}
+%\usepackage{fullpage}
+%\usepackage{lastpage}
+
+% Graphics Packages
+\usepackage{graphicx}
+%\usepackage{epstopdf}
+%\usepackage{wrapfig}
+\usepackage{float}
+%\usepackage{rotating}
+\usepackage{pdfpages}
+\usepackage{topcapt}
+
+
+
+% Problem Statement Commands
+%\usepackage{boxedminipage}
+\usepackage{enumitem}
+
+
+% Text and References
+\usepackage{listings} % listings of code, with captions and references.
+
+%\usepackage{varioref}
+\usepackage{url}
+\usepackage{natbib}
+\usepackage[nottoc]{tocbibind}
+\usepackage{cleveref}
+%\usepackage{setspace}
+%\usepackage{xltxtra}
+
+
+%--- GRAPHICS COMMANDS ---%
+\DeclareGraphicsRule{.tif}{png}{.png}{`convert #1 `dirname #1`/`basename #1 .tif`.png}
+%\renewcommand{\labelenumi}{\textbf{(\alph{enumi})}}
+
+%---- XeLaTeX COMMANDS ---%
+
+%---- META-DATA INFORMATION ----%
+% Set up for Homework from courses: change titlepages etc.
+\newcommand{\gotitle}{A 1D Stellar Model}
+\newcommand{\goauthor}{Alexander Rudy}
+\newcommand{\labnum}{}
+\newcommand{\coursenum}{ASTR220a}
+\newcommand{\coursetitle}{Stellar Structure}
+\newcommand{\fullcourse}{\coursenum: \coursetitle}
+\newcommand{\professor}{Fortney}
+\newcommand{\semester}{Fall 2012}
+
+%---- TITLE INFORMATION ----%
+% LaTeX Metadata commands required for \maketitle, which is actually pretty bad
+\title{\gotitle}
+\author{\goauthor}
+\date{\today}                                                         
+
+%--- HEADER INFORMATION ----         
+\pagestyle{fancy}
+
+\fancyhf{}
+%Header Content
+\lhead{\goauthor}
+\chead{\gotitle}
+\rhead{\coursenum}
+%Footer Content
+\cfoot{ - \thepage \ - }
+\lfoot{}
+\rfoot{}
+% Header
+\headheight 40 pt
+\headsep 10pt
+\renewcommand{\headrulewidth}{0 pt}
+\renewcommand{\footrulewidth}{0 pt}
+
+% Meta Rules
+\newcommand{\note}[1]{{\color{blue}\emph{#1}}}
+\newcommand{\scrap}[1]{{\color{green}#1}}
+\newcommand{\error}[1]{{\color{red}#1}}
+
+%--- CUSTOM COMMANDS ---
+\renewcommand{\ll}{\left} %Left Parenthesis
+\newcommand{\rr}{\right} %Right Parenthesis
+\newcommand{\txt}{\textrm} %text mode shortcut
+\renewcommand{\v}[1]{\vec{#1}} %Vector Notation
+\newcommand{\unit}[1]{\txt{ #1}} %Units Mode
+\renewcommand{\b}[1]{\mathbf{#1}} %Bold in Math Mode
+\newcommand{\E}[1]{\times 10^{#1}} %Times 10 to the [argument]
+\renewcommand{\deg}{^{\circ}} %degrees symbol
+\newcommand{\ppartial}[2]{\frac{\partial #1}{\partial #2}}
+
+\lstset{
+extendedchars=\true,
+inputencoding=utf8,
+language=python,
+basicstyle=\ttfamily
+}
+\lstset{ %
+  numbers=left,                   % where to put the line-numbers
+  numberstyle=\tiny\color{gray},  % the style that is used for the line-numbers
+  stepnumber=2,                   % the step between two line-numbers. If it's 1, each line 
+                                  % will be numbered
+  numbersep=5pt,                  % how far the line-numbers are from the code
+  backgroundcolor=\color{white},      % choose the background color. You must add \usepackage{color}
+  showspaces=false,               % show spaces adding particular underscores
+  showstringspaces=false,         % underline spaces within strings
+  showtabs=false,                 % show tabs within strings adding particular underscores
+  frame=single,                   % adds a frame around the code
+  rulecolor=\color{black},        % if not set, the frame-color may be changed on line-breaks within not-black text (e.g. comments (green here))
+  tabsize=2,                      % sets default tabsize to 2 spaces
+  captionpos=b,                   % sets the caption-position to bottom
+  breaklines=true,                % sets automatic line breaking
+  breakatwhitespace=false,        % sets if automatic breaks should only happen at whitespace
+  title=\lstname,                   % show the filename of files included with \lstinputlisting;
+                                  % also try caption instead of title
+  keywordstyle=\color{blue},          % keyword style
+  commentstyle=\color{dkgreen},       % comment style
+  stringstyle=\color{mauve},         % string literal style
+  escapeinside={\%*}{*)},            % if you want to add LaTeX within your code
+  morekeywords={*,...},              % if you want to add more keywords to the set
+  deletekeywords={...}              % if you want to delete keywords from the given language
+}
+
+%--- Some MKS Numbers for Astro ---%
+\newcommand{\ms}[1]{\txt{ m} \txt{ s}^{#1}} %Meters per second^[argument]
+
+% General Formatting Rules
+\newcommand{\HRule}{\rule{\linewidth}{0.5mm}} %Horizontal Line
+\newcommand{\pref}[1]{(\ref{#1})} %Parenthesis References
+
+% QM Commands
+\newcommand{\bra}{\langle}
+\newcommand{\ket}{\rangle}
+
+\input{macros}
+
+%--- DOCUMENT ---
+\begin{document}
+\begin{titlepage}
+\begin{centering}
+\vspace*{\fill}
+\begin{Huge}
+\begin{bf}
+\gotitle
+\end{bf}
+\end{Huge}
+
+\vspace{2em}
+
+\begin{large}
+\goauthor \vspace{1em}
+
+\fullcourse \vspace{1em}
+
+\today
+
+\end{large}
+\vspace*{\fill}
+\end{centering}
+\end{titlepage}
+
+%--- MAIN TEXT ---- %
+
+\begin{abstract}
+I created a 1-dimensional model of a star. The model uses the standard four equations of stellar structure as a set of 4 ordinary differential equations which are integrated in concert. Convection is treated as fully efficient, no mixing length theory is included. Opacity is found from a calculated opacity table. The energy generation rate is taken to be entirely dominated by p-p and CNO chains. The differential equations are integrating using a ``shooting to a fitting point" method, and demonstrated to be well converged. The boundary values are determined with a simple core and basic photosphere boundary model. The model is implemented as a python module and command line interface.
+\end{abstract}
+
+\tableofcontents
+\listoffigures
+\listoftables
+
+\clearpage
+%:Introduction
+\section{Introduction}\label{sec:introduction}
+
+I have created a one-dimensional model of star, completed by numerically integrating the equations of stellar structure. The modeling program shows stable behavior over a range of masses, but only a star of mass $\starmass$ is presented here.
+
+This report is structured in the following manner. In \cref{sec:physicalmodel}, I describe the physical model of the star, including the equations of stellar structure and the other physical components that are involved in my model. In \cref{sec:numerical}, I described the numerical methods that are used to integrate the four equations of stellar structure, and the criterion that I use to conclude that my star has converged. In \cref{sec:parameters}, I describe the starting parameters that I used for the star described in this paper. \Cref{sec:structure} describes the structure of the program used, how to operate it, and where to acquire the source code. \Cref{sec:results} shows the stellar structure for the single star example used. \Cref{sec:discussion} compares the performance of my program with more detailed Zero-Age-Main-Sequence models.
+
+%:Physical Model
+\section{Physical Model}\label{sec:physicalmodel}
+The physical model consists of the four equations of stellar structure, described in \cref{sec:equations}. These four equations rely on a calculation of the opacity of the star. This calculation is taken from other's work, and is described in \cref{sec:opacity}. As well, the stellar model uses a simplified model of fusion, considering only the p-p and CNO chains. The surface is described by an artificial photospheric boundary condition, and the center is described by an artificial core condition derived from the equations of stellar structure.
+
+%:Stellar Structure
+\subsection{Equations of Stellar Structure} \label{sec:equations}
+The four equations of stellar structure are shown in \cref{eqn:hydrostatic,eqn:consvofmass,eqn:fusion,eqn:energytransport}. They are shown in Lagrangian form, where mass becomes the independent variable, allowing the program to specify a stellar mass to model.
+
+Conservation of mass through each radius shell requires that
+\begin{equation} \label{eqn:consvofmass}
+\frac{dr}{dm} = \frac{1}{4\pi r^2 \rho}
+\end{equation}
+Conservation of energy flux requires that the only contribution to changing the luminosity be fusion. The energy generated per unit mass is given by $\epsilon$, and is described in \cref{sec:fusion}. Therefore, the change in luminosity at each mass shell is simply
+\begin{equation}\label{eqn:fusion}
+\frac{dl}{dm} = \epsilon
+\end{equation}
+In order to be gravitationally stable, the star must be in hydrostatic equilibrium,
+\begin{equation}\label{eqn:hydrostatic}
+\frac{dP}{dm} = -\frac{Gm}{4\pi r^4}
+\end{equation}
+And in order to maintain a specific temperature gradient, the star must transport energy from the core to the surface. Energy transport requires
+\begin{equation}\label{eqn:energytransport}
+\frac{dT}{dm} = - \frac{GmT}{4\pi r^4 P} \nabla
+\end{equation}
+
+\Cref{eqn:hydrostatic,eqn:consvofmass,eqn:fusion,eqn:energytransport} represent a coupled system of four ordinary differential equations. The primary function of the model is to determine the four values $r(m)$, $l(m)$, $T(m)$ and $P(m)$ from these equations.
+
+%:Energy Transport
+\subsection{Energy Transport} \label{sec:energytransport}
+\Cref{eqn:energytransport} depends on the local temperature gradient $\nabla$. In some cases, this gradient will be simply the adiabatic gradient. This means that the gas locally is transporting energy solely through convection. Convection transports material adiabatically, so the temperature gradient becomes $\nabla_{AD} = 0.4$. If convection is not efficient at transporting material, the radiative temperature gradient applies. In this situation, $\nabla_{AD} > \nabla_\txt{rad}$, which is the Schwartzchild criterion for convection. In a real star, convection can be triggered before this condition is met, especially when energy transport is inefficient. This effect is not modeled here. The radiative energy gradient is given by
+\begin{equation}\label{eqn:delrad}
+\nabla_\txt{rad} = \frac{3}{16 \pi a c G} \frac{\kappa l P}{ m T^4}
+\end{equation}
+In the model, I use a pure Schwartzchild criterion, and calculate the temperature gradient at every step to determine if the star is locally radiative or convective.
+
+%:Opacity
+\subsection{Opacity} \label{sec:opacity}
+\Cref{eqn:delrad} relies on the local opacity of the stellar material. Opacities are difficult to calculate on the fly, as they are complicated functions of density, temperature and composition at the local position. Opacities in my program are taken from the OPAL project \citep{1996ApJ...456..902R}. The OPAL project provides opacities at a fixed composition, and so the composition of the star in this model is fixed at the beginning and assumed to be uniform (similar to a ZAMS model).
+
+%:Energy Generation Rate
+\subsection{Energy Generation} \label{sec:fusion}
+Energy generation is assumed to be entirely driven by fusion. Two reaction paths are considered in the calculation of the energy generation rate, the p-p chain and the CNO chain. Each chain's reaction rate is modeled as a power law, from \citet{Kippenhahn:1994tm}. The energy generation rates are shown in \cref{fig:energy}.
+
+\begin{figure}[htbp]
+   \centering
+   \includegraphics[width=0.75\linewidth]{../epsilon.pdf}
+   \caption[Energy Generation Rate]{Energy generation rate as a function of temperature used in the stellar model. The contributions from the p-p chain and the CNO chain are shown.}
+   \label{fig:energy}
+\end{figure}
+
+%:Photosphere
+\subsection{Stellar Surface}
+The boundary conditions at the stellar surface are modeled as a truncated photosphere. The general idea is to consider the star at an optical depth of $\tau = 2/3$. From this, and an initial guess for the Radius of the star ($R_s$) as well as the luminosity of the star ($L_s$), it is possible to calculate pressure ($P_s$) and temperature ($T_s$) at the surface of the star. The temperature is given by
+\begin{equation}\label{eqn:surfacet}
+T = \left(\frac{L_s}{4\pi R_s^2 \sigma}\right)^{1/4}
+\end{equation}
+The surface pressure is given by
+\begin{equation}
+P(r=R) = \frac{GM}{R^2} \frac{2}{3} \frac{1}{\bar{\kappa}}
+\end{equation}
+This equation contains an inherent degeneracy. This is because the opacity is a function of temperature and density, $\kappa = \kappa(\rho,T)$, and the density is in turn a function of the temperature and pressure, $\rho = \rho(P,T)$. To break this circularity, the pressure was found iteratively. If $P_\txt{guess}$ was supplied to calculate the opacity, then the function $\Delta P = \ll| P_\txt{guess} - P_\txt{surface} \rr|$ was minimized to find an estimate for the surface pressure. \Cref{tab:surface} shows these values at the surface of the $1M_\odot$ star. The given values are observationally determined and well known quantities, $R_\odot$ and $L_\odot$.
+
+\begin{table}[htbp]
+   \centering
+   \topcaption{Boundary values found for the surface.}
+   \begin{tabular}{@{} l|l @{}} 
+   & Value \\ \hline \hline
+   $R_s$ & $1 R_\odot$ (given)\\
+   $L_s$ & $1 L_\odot$ (given) \\
+   $P_s$ & $8.95\E{4} \unit{dyne cm}^{-2}$ \\
+   $T_s$ & $5775 \unit{K}$
+   \end{tabular}
+   \label{tab:surface}
+\end{table}
+
+%:Core
+\subsection{Stellar Core}
+The boundary conditions at the core are much more straight forward. Boundary conditions are taken by guessing the pressure and temperature in the core of the star, then taking an initial step in mass. In these simulations, $m_0 = \initaldm$. The inner radius is given by
+\begin{equation}
+r(m=m_0) = \frac{3}{4\pi \rho_c}^{1/3} m^{1/3}
+\end{equation}
+The luminosity is
+\begin{equation}
+l(m=m_0) = \epsilon m
+\end{equation}
+The pressure is
+\begin{equation}
+P(m=m_0) = P_c - \frac{3 G}{8 \pi} \left(\frac{4 \pi}{3}\right)^{4/3} m^{2/3}
+\end{equation}
+If the center of the star is convective, then the inner temperature is given by
+\begin{equation}
+\ln(T(m=m_0))-\ln(T_c) = - \left( \frac{\pi}{6} \right)^{1/3} \frac{\nabla_{AD} \rho_c^{4/3}}{P_c} m^{2/3}
+\end{equation}
+otherwise, the inner temperature is
+\begin{align}
+T(m=m_0) = T_c^4 - \frac{1}{2ac} \ll(\frac{3}{4 \pi}\rr)^{2/3} \kappa \epsilon \rho_c^{4/3} m^{2/3}
+\end{align}
+Whether the core is convective or radiative must be guessed for the initial integration. In future integrations, the value from the previous integration is used. Values for the center (in the radiative case) are shown in \cref{tab:center}. The core values are taken from an $n=$ polytrope, which approximately describes solar-mass stars.
+
+\begin{table}[htbp]
+   \centering
+   \topcaption{Boundary values found for the center.}
+   \begin{tabular}{@{} l|l|l @{}} 
+   & Center & $m=m_0$ \\ \hline \hline
+   $R_s$ & $0$ & $1.59\E{6} \unit{cm}$ \\
+   $L_s$ & $0$ &  $1.989\E{24} \unit{ergs s}^{-1}$\\
+   $P_s$ & $2.47\E{17} \unit{dyne cm}^{-2}$ & $2.47\E{17} \unit{dyne cm}^{-2}$ \\
+   $T_s$ & $1.57\E{7} \unit{K}$ & $1.57\E{7} \unit{K}$
+   \end{tabular}
+   \label{tab:center}
+\end{table}
+
+%:Numerical Method
+\section{Numerical Method}\label{sec:numerical}
+The numerical method is based on the shooting to a fitting point method described in \citet{Press:2007tk}. The method consists of integrating the ODEs described by \cref{sec:equations} from each boundary toward the center, ``shooting towards a fitting point". The differences at each fitting point are minimized using a Newton-Rapson minimization method.
+%:Shooting Method
+\subsection{Shooting Method}
+The shooting method uses two integrations which aim to meet at the center. At each successive iteration, the boundary values are adjusted such that the discrepancy between each variable at the fitting point is reduced. An example initial integration with large gaps in the fitting points is shown in \cref{fig:firstint}. In the shooting method, we can simplify this picture as $\v{y} = f(\v{x})$, where $\v{x}$ are the input boundary conditions that we supply to the system, and $\v{y}$ are the discrepancies at the fitting point. The integration then occurs in $f(\v{x})$.
+
+%:ODE Integration
+\subsection{Numerical Integration}
+The integration is done with a Runge-Kutta order-$n$ adaptive step size integrator. The integrator is the \lstinline{scipy.integrate.odeint} integrator\footnote{From \lstinline{scipy} version $0.11$, documented at \url{http://docs.scipy.org/doc/scipy/reference/generated/scipy.integrate.odeint.html}} which is based on \lstinline{ODEPACK} from \citet{hindmarsh1983odepack}. The integrator is a variable-order, variable-step-size integrator which maintains a specified error tolerance at each step. In this system, the error tolerance is set to $10^{-9}$.
+
+%:Newton Rapson
+\subsection{Newton Rapson}
+The Newton Rapson method \citep[from][]{Press:2007tk} uses a forward difference Jacobian to estimate the full step size that would minimize the system of equations $\v{y} = f(\v{x})$ in the linear approximation. An optimized linear search is then used to find the a step size which progresses towards the true minimum and reduces the total error introduced by the linear step. This search is performed iteratively until the convergence condition (\cref{sec:convergence}) is met.
+
+%:Convergence
+\subsection{Numerical Convergence} \label{sec:convergence}
+The numerical convergence is a non-dimensionalized parameter used to determine when the gaps at the fitting point from the shooting method are sufficiently small. The parameter is simply $\v{y} / \v{x}$ for this system, i.e. the convergence parameter is the ratio of the gap in the fitting point to the value guessed for that parameter. This is used to reduce the effect of the large individual values (especially in Luminosity), and will result in convergence when the fitting gaps are quite small. In this model, the convergence tolerance was set to $10^{-6}$.
+%:Paramters Used
+\section{Model Parameters}\label{sec:parameters}
+The model is seeded with Solar-like values, and is used to calculate the properties of a $\starmass$ star. The composition was taken to be approximately solar, with $X=0.70$ and $Y=0.28$. The mass fraction of CNO was taken as $X_\txt{CNO} = 0.7 Z$.
+
+\subsection{Surface Guesses}
+The surface guesses for $R$ and $L$ are the directly measured solar values, described in \cref{tab:surface}.
+
+\subsection{Core Guesses}
+The central pressure $P_c$ and central temperature $T_c$ are taken from a polytropic equation of state for the sun with $n=$. These values are shown in \cref{tab:center}.
+
+%:Program Structure
+\section{Program Structure} \label{sec:structure}
+The program is a python module with a command line interface. It is saved to GitHub, an online code repository, and can be found at \url{https://github.com/alexrudy/pystellar}. The program uses the python \lstinline{distutils} convention. To install the program, download the source and the \lstinline{pyshell} package (which provides the command line interface, and is available at \url{https://github.com/alexrudy/pyshell}), then, from the \lstinline{pyshell} directory, do
+\begin{lstlisting}[language=bash]
+$ sudo python setup.py install
+\end{lstlisting}
+This will install the executable \lstinline{PyStar}. Running
+\begin{lstlisting}[language=bash]
+$ PyStar -h
+\end{lstlisting}
+will provide help output on running the program.
+
+\subsection{Python Module}
+The program is set up as a single python module, called \lstinline{pystellar}. The command line interface is handled by the module \lstinline{pystellar.controller}. The whole system is configured using YAML files. There is a YAML file inside the \lstinline{pystellar} module which provides the defaults. A YAML file with the same name (``Star.yml") in the current directory will overwrite values from the original file.
+
+\subsection{Controllers}
+There are three main controllers. The main controller is in \lstinline{pystellar.controller} which implements the command line interface and the main actions. The Newton-Rapson controller implements the Newton-Rapson method and controllers the integrators required for Newton-Rapson. It is implemented in \lstinline{pystellar.newton}. Finally, the live plotting is controlled by the dashboard, implemented in \lstinline{pystellar.dashboard}. During normal operation, each of these controllers (and each of the objects described in \cref{sec:objects}) operates in their own thread, allowing integrations and interface displays to be performed in parallel.
+
+\subsection{Operating Objects} \label{sec:objects}
+Each integrator, as well as the opacity table, operates in an independent thread, and operates in parallel. Only a single opacity table is used for all of the integrators, so calls to the opacity table a queued across all threads. The opacity table is implemented in \lstinline{pystellar.opacity} and the star is implemented as a class in \lstinline{pystellar.star}.
+
+%:Results
+\section{Results} \label{sec:results}
+The Newton-Rapson method converged in 22 iterations, and the convergence showed a power-law like behavior which suggests stability. Towards the end of the minimization, some stability was lost in the pressure function, likely due to the very well converged pressure variable, which neared the numerical precision limit of the model.
+
+The results are shown in a series of tables and figures. \Cref{fig:firstint} shows the result of an initial integration performed with the starting boundary value guesses from \cref{sec:parameters}. \Cref{fig:finalint} shows the integration after the Newton-Rapson method converges. The boundary values at the start and final positions are provided in \cref{tab:guess}. \Cref{fig:finalintextra} shows other interesting physical parameters for the star once the Newton Rapson method has converged.
+
+ \begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.75\linewidth]{../single-integration.pdf}
+    \caption[Initial Integration]{The stellar structure of the initial boundary condition $\starmass$ star, which show large gaps across the integration fitting point.}
+    \label{fig:firstint}
+ \end{figure}
+ 
+ \begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.75\linewidth]{../final-integration.pdf}
+    \caption[Converged Integration]{The stellar structure of the converged $\starmass$ star, which show a smooth transition across the integration fitting point.}
+    \label{fig:finalint}
+ \end{figure}
+ 
+
+ \begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.75\linewidth]{../final-integration-extra.pdf}
+    \caption[Properties of the Converged Integration]{Internal physical values calculated across the stellar structure. The plots show Density $\rho$, Temperature Gradiant $\nabla$, Energy generation $\epsilon = \frac{dl}{dm}$ and opacity $\kappa$ for the converged integration shown in Figure \ref{fig:finalint} and summarized in Table \ref{tab:guess}. }
+    \label{fig:finalintextra}
+ \end{figure}
+ 
+\begin{table}[htbp]
+\begin{center}
+\topcaption[Boundary Parameters]{Boundary parameters used for the $\starmass$ star initially, and final values of those parameters after convergence.}
+\label{tab:guess}
+\input{guesses}
+\end{center}
+\end{table}
+
+The gaps at the fitting points are shown in \cref{fig:conv}, along with the convergence parameters. These gaps are summarized in \cref{tab:conv}. The table suggests that the luminosity was the final value to converge in the mode, and that all other variables were well converged (by 1 or 2 orders of magnitude) on the last iteration. \Cref{fig:boundary,fig:boundarydelta} show the boundary conditions, and the relative change of those boundary conditions during the course of the Newton-Rapson method.
+
+\begin{table}[htbp]
+\begin{center}
+\topcaption[Gaps at Fitting Points]{Difference in variables at the fitting point ($m = \fittingpoint $) initially, and at the end of the converged program. The convergence parameter $c$ is shown at the end of the program. The algorithm was determined to have converged when all convergence parameters were less than $\tolparam$.}
+\label{tab:conv}
+\input{fittingpoint}
+ \end{center}
+ \end{table}
+ 
+ \begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\linewidth]{../fitting-points.pdf}
+    \caption[Gaps at Fitting Points]{Difference at fitting points (and the respective convergence parameter) for each variable in the stellar integration code. The gap in fitting points decreases with a power-law structure. The system was determined to have converged when all four convergence parameters were below $\tolparam$. These values can be seen in Table \ref{tab:conv}.}
+    \label{fig:conv}
+ \end{figure}
+ 
+  \begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\linewidth]{../guess-movement.pdf}
+    \caption[Boundary Point Movement]{The change in boundary conditions at each step of the Newton Rapson method during the convergence search.}
+    \label{fig:boundarydelta}
+ \end{figure}
+ \begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\linewidth]{../initial-conditions.pdf}
+    \caption[Boundary Points]{The boundary conditions used at each step of the Newton Rapson method during the convergence search. These plots are summarized in Table \ref{tab:guess}.}
+    \label{fig:boundary}
+ \end{figure}    
+
+
+%:Discussion
+\section{Discussion} \label{sec:discussion}
+With the final positions of the boundary conditions for the converged model, it is easy to compare this model with a ZAMS model. The model used is from \citet{hansen2004stellar}. The comparison is shown in \cref{tab:compare}. Compared the ZAMS model, this model overestimates the radius, underestimates the luminosity, and well matches the temperature and pressure.
+
+\begin{table}[htbp]
+\begin{center}
+\topcaption[Comparison to ZAMS Parameters]{Boundary parameters found for the $\starmass$ star compared to those given in \citet{hansen2004stellar}.}
+\label{tab:compare}
+\input{compare}
+\end{center}
+\end{table}
+
+%:Conclusion
+\section{Conclusion} \label{sec:conclusion}
+This stellar 1-D model works well, and reproduces values similar to those found from a more sophisticated ZAMS model, with only a few discrepancies. These discrepancies can easily be attributed to some of the many simplifications made in the physics of this 1D model. Neglecting effects like ionization, compositional gradients, and greatly simplifying energy generation rates has had a noticeable effect on the derived properties of the star in this model.
+
+%--- BIBLIOGRAPHY ---%
+\bibliographystyle{apalike}
+\bibliography{pystellar}
+
+
+\end{document}
