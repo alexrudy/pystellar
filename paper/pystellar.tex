@@ -1,7 +1,8 @@
 %!TEX TS-program = pdfLaTeX
-\documentclass[12pt]{article}
+\documentclass[10pt]{article}
 %--- PACKAGES ---
 
+\usepackage{hyperref}
 % Mathematics and Symbols
 \usepackage{amsmath} 
 \usepackage{amssymb}
@@ -42,7 +43,9 @@
 %\usepackage{setspace}
 %\usepackage{xltxtra}
 
-
+\definecolor{dkgreen}{rgb}{0,0.6,0}
+\definecolor{gray}{rgb}{0.5,0.5,0.5}
+\definecolor{mauve}{rgb}{0.58,0,0.82}
 %--- GRAPHICS COMMANDS ---%
 \DeclareGraphicsRule{.tif}{png}{.png}{`convert #1 `dirname #1`/`basename #1 .tif`.png}
 %\renewcommand{\labelenumi}{\textbf{(\alph{enumi})}}
@@ -104,14 +107,14 @@
 extendedchars=\true,
 inputencoding=utf8,
 language=python,
-basicstyle=\ttfamily
+basicstyle=\ttfamily\footnotesize
 }
 \lstset{ %
   numbers=left,                   % where to put the line-numbers
   numberstyle=\tiny\color{gray},  % the style that is used for the line-numbers
   stepnumber=2,                   % the step between two line-numbers. If it's 1, each line 
                                   % will be numbered
-  numbersep=5pt,                  % how far the line-numbers are from the code
+  numbersep=10pt,                  % how far the line-numbers are from the code
   backgroundcolor=\color{white},      % choose the background color. You must add \usepackage{color}
   showspaces=false,               % show spaces adding particular underscores
   showstringspaces=false,         % underline spaces within strings
@@ -119,7 +122,7 @@ basicstyle=\ttfamily
   frame=single,                   % adds a frame around the code
   rulecolor=\color{black},        % if not set, the frame-color may be changed on line-breaks within not-black text (e.g. comments (green here))
   tabsize=2,                      % sets default tabsize to 2 spaces
-  captionpos=b,                   % sets the caption-position to bottom
+  captionpos=t,                   % sets the caption-position to bottom
   breaklines=true,                % sets automatic line breaking
   breakatwhitespace=false,        % sets if automatic breaks should only happen at whitespace
   title=\lstname,                   % show the filename of files included with \lstinputlisting;
@@ -330,14 +333,14 @@ The central pressure $P_c$ and central temperature $T_c$ are taken from a polytr
 
 %:Program Structure
 \section{Program Structure} \label{sec:structure}
-The program is a python module with a command line interface. It is saved to GitHub, an online code repository, and can be found at \url{https://github.com/alexrudy/pystellar}. The program uses the python \lstinline{distutils} convention. To install the program, download the source and the \lstinline{pyshell} package (which provides the command line interface, and is available at \url{https://github.com/alexrudy/pyshell}), then, from the \lstinline{pyshell} directory, do
-\begin{lstlisting}[language=bash]
+The program is a python module with a command line interface. It is saved to GitHub, an online code repository, and can be found at \url{https://github.com/alexrudy/pystellar}. The program uses the python \lstinline{distutils} convention. To install the program, download the source and the \lstinline{pyshell} package (which provides the command line interface, and is available at \url{https://github.com/alexrudy/pyshell}, and should be installed in a similar manner), then, from the \lstinline{pystellar} directory, do
+\begin{verbatim}
 $ sudo python setup.py install
-\end{lstlisting}
+\end{verbatim}
 This will install the executable \lstinline{PyStar}. Running
-\begin{lstlisting}[language=bash]
+\begin{verbatim}
 $ PyStar -h
-\end{lstlisting}
+\end{verbatim}
 will provide help output on running the program.
 
 \subsection{Python Module}
@@ -436,5 +439,10 @@ This stellar 1-D model works well, and reproduces values similar to those found 
 \bibliographystyle{apalike}
 \bibliography{pystellar}
 
+%\appendix
+
+%\section{Configuration File}
+
+%\lstinputlisting[caption={Star.yml}]{../pystellar/Star.yml}
 
 \end{document}
