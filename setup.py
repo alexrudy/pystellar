@@ -22,7 +22,7 @@ setup(
     version = version,
     packages = find_packages(exclude=['tests']),
     package_data = {'pystellar':['OPAL.yml']},
-    install_requires = ['distribute','PyYAML>=3.10','astropysics',AstroObjectDep],
+    install_requires = ['distribute','PyYAML>=3.10','astropysics',AstroObjectDep,'pyshell'],
     dependency_links = [AstroObjectURL],
     test_suite = 'tests',
     author = 'Alexander Rudy',
