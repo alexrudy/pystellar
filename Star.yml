@@ -1,8 +1,8 @@
 # ADJUSTMENTS TO DEFAULT VALUES
 Star:
   Initial:
-    Rs: 1.3
-    Ls: 0.65
+    Rs: 1.0
+    Ls: 1.0
     Convective: false
   Integration:
     fp: 0.5
@@ -11,7 +11,7 @@ System:
     Update: 0
   NewtonRapson:
     # niters: 10
-    stepeps: 0.5
+    stepeps: 1
     tol: 1.0e-6
   Integrator:
     PyStellar:
