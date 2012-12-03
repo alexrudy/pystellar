@@ -152,9 +152,11 @@ class ObjectThread(ObjectManager,Process):
     
     def stop(self):
         """Send the thread stop signal."""
-        self.input.put((self.hdr,self.STOP,None,None),timeout=self._timeout)
-        self.clear()
-        self.join()
+        if self.is_alive():
+            self.input.put((self.hdr,self.STOP,None,None),timeout=self._timeout)
+            self.clear()
+            self.join()
+        return
     
     def run(self):
         """starts an opactiy thread which takes a queue of items."""
@@ -164,6 +166,8 @@ class ObjectThread(ObjectManager,Process):
             hdr, func, args, kwargs = self.input.get(timeout=self._timeout)
             if self.STOP == func:
                 done = True
+                if hasattr(O,'stop'):
+                    O.stop()
             else:
                 try:
                     attr = getattr(O,func)
