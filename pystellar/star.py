@@ -241,11 +241,8 @@ class Star(object):
         agrad = grad(rgrad)
         self.opacity.kappa(T=ys[:,3],rho=rho)
         kappa = self.opacity.retrieve()
-        all_data = np.vstack(map(np.atleast_2d,(xs,ys.T,derivs,rho,eps,rgrad,agrad,kappa))).T
-        stream = StringIO()
-        np.savetxt(stream,all_data)
-        self.data_log.info(stream.getvalue())
-        stream.close()
+        all_data = np.vstack(map(np.atleast_2d,(xs,ys.T,rho,eps,rgrad,agrad,kappa))).T
+        np.savetxt(self.config["System.Outputs.Data.Integration"] % {'integrator':integrator},all_data)
         
         if self._plotting:
             self.update_dashboard(xs,ys.T,rho,agrad,kappa,eps,line=integrator+self.name,figure='split')
@@ -356,7 +353,8 @@ class Star(object):
         
     def stop(self):
         """End this star!"""
-        pass
+        if isinstance(self.opacity,ObjectThread):
+            self.opacity.stop()
         
     def kill(self):
         """Kill this star!"""
