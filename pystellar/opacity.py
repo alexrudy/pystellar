@@ -45,6 +45,96 @@ from .errors import CodedError
 
 log = logging.getLogger(__name__)
 
+def merge_tables(scomp,ecomp,stbls,etbls):
+    """Merge table sets into a single set."""
+    nmerged = 0
+    stbls = stbls.tolist()
+    for X,Y,dXc,dXo,tn in ecomp:
+        match =  (scomp[:,0] == X) & (scomp[:,1] == Y) & (scomp[:,2] == dXc) & (scomp[:,3] == dXo)
+        if np.sum(match) == 1:
+            nmerged += 1
+            stn = int(scomp[match][0,4])
+            source = stbls[stn]
+            stbls[stn] = np.vstack((source,etbls[tn]))
+            log.debug("Table merged to X=%.2f Y=%.2f dXc=%.2f dXo=%.2f with new length %d" % (X,Y,dXc,dXo,stbls[stn].size))
+        elif np.sum(match) > 1:
+            log.debug("Multiple Table Matches Found, Ignoring.")
+    if nmerged > 0:
+        log.debug("%d tables merged" % nmerged)
+    else:
+        log.critical("NO tables mereged")
+        raise ValueError("NO NEW TABLES MERGED")
+    return stbls
+
+def read_standalone_opal(X,Z,fkey,cfg):
+    """docstring for read_standalone_opal"""
+    Xi = X * 10
+    Zi = ("%f" % Z)[2:].rstrip("0")
+    c = cfg[fkey]
+    filename = c['filename'] % dict(X=Xi,Z=Zi)
+    char_line = c["table.cols"] * c["table.chars"] # Character Length of a Line
+    
+    try:
+        with open(filename,'r') as stream:
+            lines = stream.readlines()
+    except IOError:
+        raise ValueError("File %s Not Found. Perhaps composition X=%.2f, Z=%.3f not available." % (filename,X,Z))
+    
+    
+    table, head = read_single_opal(lines,c,0,len(lines),char_line)
+    
+    rossk = table[:,1:]
+    logT = table[:,0]
+    logR = head
+    logTs, logRs = np.meshgrid(logT,logR)
+    
+    tables = np.array([np.vstack((logRs.flat,logTs.flat,rossk.flat)).T])
+    
+    comps = np.array([[X,1.0-X-Z,0.0,0.0,0]])
+    
+    
+    return comps, tables
+
+def read_single_opal(flines,c,begin,end,char_line):
+    """docstring for read_single_opal"""
+    # Normalize the table's text
+    # Specifically, target short circuited lines.
+    table_list = flines[begin:end] # List of lines in a given table
+    table_txt = "".join(table_list[:c.get("table.head",0)]) # Text output of table normalization
+        
+    # Turn the header row into a numpy array
+    head = np.genfromtxt(
+        StringIO(table_list[c.get("table.header")]),
+        filling_values=0.0,
+        )[1:]
+        
+    assert np.isfinite(head).all(), "Must have finite header row."
+    if -c.get("table.foot",0) == 0:
+        table_data = table_list[c.get("table.head",0):]
+    else:
+        table_data = table_list[c.get("table.head",0):-c.get("table.foot",0)]
+            
+    # Normalize the data table line lengths
+    for line in table_data:
+        line = line.rstrip("\n")
+        if len(line) < char_line:
+            line += "  9.999"*((char_line-len(line))//c["table.chars"])
+        table_txt += line + "\n"
+    table_txt += "".join(table_list[-c.get("table.foot",0):0]) #Tack the footer rows back on
+    # Generate the data table from text
+    table = np.genfromtxt(
+        StringIO(table_txt),
+        comments="*",
+        filling_values=np.nan,
+        missing_values="9.999", #We inserted these as unknown values!
+        skip_header=c.get("table.head",0),
+        skip_footer=c.get("table.foot",0)-1,
+    )
+        
+    table[table == 9.999] = np.nan
+    
+    return table, head
+
 def read_table_opal(fkey,cfg):
     """Read a given OPAL format opacity file.
     
@@ -99,42 +189,8 @@ def read_table_opal(fkey,cfg):
     for i in xrange(table_num):
         begin += c["table.begin"]
         end   = begin + c["table.end"]
-        # Normalize the table's text
-        # Specifically, target short circuited lines.
-        table_list = flines[begin:end] # List of lines in a given table
-        table_txt = "".join(table_list[:c.get("table.head",0)]) # Text output of table normalization
         
-        # Turn the header row into a numpy array
-        head = np.genfromtxt(
-            StringIO(table_list[c.get("table.header")]),
-            filling_values=0.0,
-            )[1:]
-        
-        if -c.get("table.foot",0) == 0:
-            table_data = table_list[c.get("table.head",0):]
-        else:
-            table_data = table_list[c.get("table.head",0):-c.get("table.foot",0)]
-            
-        # Normalize the data table line lengths
-        for line in table_data:
-            line = line.rstrip("\n")
-            if len(line) < char_line:
-                line += "  9.999"*((char_line-len(line))//c["table.chars"])
-            table_txt += line + "\n"
-        table_txt += "".join(table_list[-c.get("table.foot",0):0]) #Tack the footer rows back on
-        # Generate the data table from text
-        table = np.genfromtxt(
-            StringIO(table_txt),
-            comments="*",
-            filling_values=np.nan,
-            missing_values="9.999", #We inserted these as unknown values!
-            skip_header=c.get("table.head",0),
-            skip_footer=c.get("table.foot",0)-1,
-        )
-        
-        table[table == 9.999] = np.nan
-        
-        begin = end
+        table,head = read_single_opal(flines,c,begin,end,char_line)
         
         tables[i,:,:] = table[:,1:]
         rows[i,:] = table[:,0]
@@ -213,7 +269,7 @@ class OpacityTable(object):
     
       
     """
-    def __init__(self, fkey,load=True, filename="OPAL.yml", X=None, Y=None, snap=False, error=True, wmax=100):
+    def __init__(self, fkey,load=True, filename="OPAL.yml", X=None, Y=None, snap=False, error=True, wmax=100, efkey=None):
         super(OpacityTable, self).__init__()
         
         # Initialize our attribute values
@@ -240,6 +296,9 @@ class OpacityTable(object):
         self.cfg = DottedConfiguration({})
         self.cfg.load(filename,silent=False)
         self.cfg.dn = DottedConfiguration
+        self.table_type = self.cfg[self.fkey].get('type','single')
+        self.table_comp = (X,Y)
+        
         
         # Load the tables (from cached .npy files if appropriate)
         self.log.debug("Loading Tables...")
@@ -253,6 +312,8 @@ class OpacityTable(object):
             self.read()
         self.log.debug("Tables Loaded: %s",repr(self._tbls.shape))
         
+
+        
         # Make ourselves a nearest-neighbor composition interpolator
         self._composition_interpolator()
         
@@ -260,7 +321,20 @@ class OpacityTable(object):
         if X is not None and Y is not None:
             self.composition(X,Y)
         
-        self.log.info("Opacity Interpolator Initialzied")
+        if efkey is not None:
+            self.log.debug("Loading extension tables")
+            if self.cfg[efkey].get('type','single') == 'single':
+                e_comp, e_tbls = read_table_opal(efkey,cfg=self.cfg)
+                self.log.debug("Read Opacity Tables from %(filename)s" % self.cfg[efkey])
+            elif self.cfg[efkey].get('type','single') == 'split':
+                e_comp, e_tbls = read_standalone_opal(self.X,self.Z,efkey,cfg=self.cfg)
+                self.log.debug("Read Opacity Tables from %(filename)s" % self.cfg[efkey])
+            self._tbls = merge_tables(self._comp,e_comp,self._tbls,e_tbls)
+            self.log.debug("Read Extension Opacity Tables from %(filename)s" % self.cfg[efkey])
+            self._temperature_density_interpolator()
+        
+        
+        self.log.debug("Opacity Interpolator Initialzied")
         
     def _composition_interpolator(self):
         """Creates the compositional (X,Y,Z) interpolator"""
@@ -271,15 +345,15 @@ class OpacityTable(object):
         self.log.debug("Input Shapes: [x,y]=%r, [v]=%r" % (repr(points.shape), repr(values.shape)))
         nans = (np.sum(np.isnan(points)), np.sum(np.isnan(values)))
         if nans[0] > 0 or nans[1] > 0:
-            log.debug("Input NaNs: [x,y]=%g, [v]=%g" % nans)
+            self.log.debug("Input NaNs: [x,y]=%g, [v]=%g" % nans)
         self._table_number = NearestNDInterpolator(points,values)
         
     def _temperature_density_interpolator(self):
         """Creates the temperature-density interpolator"""
         from scipy.interpolate import LinearNDInterpolator
         self.log.debug("Initializing Main Interpolator...")
-        points = self._tbls[self.n,:,:2]
-        values = self._tbls[self.n,:,2]
+        points = self.tbl[:,:2]
+        values = self.tbl[:,2]
         points = points[np.isfinite(values)]
         values = values[np.isfinite(values)]
         self.log.debug("Interpolating Opacity in %d dimensions on %d points" % (points.shape[1],points.shape[0]))
@@ -293,8 +367,14 @@ class OpacityTable(object):
         
     def read(self):
         """Read the opacity tables from an OPAL file."""
-        self._comp, self._tbls = read_table_opal(self.fkey,cfg=self.cfg)
-        self.log.debug("Read Opacity Tables from %(filename)s" % self.cfg[self.fkey])
+        if self.table_type == 'single':
+            self._comp, self._tbls = read_table_opal(self.fkey,cfg=self.cfg)
+            self.log.debug("Read Opacity Tables from %(filename)s" % self.cfg[self.fkey])
+        elif self.table_type == 'split':
+            X,Y = self.table_comp
+            Z = 1.0 - X - Y
+            self._comp, self._tbls = read_standalone_opal(X,Z,self.fkey,cfg=self.cfg)
+            self.log.debug("Read Opacity Tables from %(filename)s" % self.cfg[self.fkey] % dict(X=X,Z=Z))
         
     def load(self):
         """Load the interpolator values from a pair of files. Will load from two numpy files the composition table and the opacity tables."""
@@ -339,6 +419,11 @@ class OpacityTable(object):
     def n(self):
         """Table number currently in use."""
         return self._n
+        
+    @property
+    def tbl(self):
+        """The table!"""
+        return np.asarray(self._tbls[int(self.n)])
         
     def properties(self):
         """Return the properties of this object as a tuple:
@@ -438,20 +523,20 @@ class OpacityTable(object):
         
     def bounds(self,logR=None,logT=None):
         """Return the bounds of the selected opacity table."""
-        top = np.array([np.max(self._tbls[self.n,:,i]) for i in xrange(2)])
-        bot = np.array([np.min(self._tbls[self.n,:,i]) for i in xrange(2)])
+        top = np.array([np.max(self.tbl[:,i]) for i in xrange(2)])
+        bot = np.array([np.min(self.tbl[:,i]) for i in xrange(2)])
         return np.vstack((top,bot)).T
         
     def snap(self,points):
         """Take a pair of points and place them back on the valid area."""
-        maxes = np.array([(points[:,i] <= np.max(self._tbls[self.n,:,i])).any() for i in xrange(2)]).all()
-        mines = np.array([(points[:,i] >= np.min(self._tbls[self.n,:,i])).any() for i in xrange(2)]).all()
+        maxes = np.array([(points[:,i] <= np.max(self.tbl[:,i])).any() for i in xrange(2)]).all()
+        mines = np.array([(points[:,i] >= np.min(self.tbl[:,i])).any() for i in xrange(2)]).all()
         if (mines and maxes):
             return points
         
         for point in points:
             for ind,ele in enumerate(point):
-                vmax, vmin = np.max(self._tbls[self.n,:,ind]),np.min(self._tbls[self.n,:,ind])
+                vmax, vmin = np.max(self.tbl[:,ind]),np.min(self.tbl[:,ind])
                 if ele > vmax:
                     point[ind] = vmax
                 elif ele < vmin:
@@ -466,8 +551,8 @@ class OpacityTable(object):
         :raises: :exc:`ValueError` when points are out of bounds.
         
         """
-        maxes = np.array([(points[:,i] <= np.max(self._tbls[self.n,:,i])).any() for i in xrange(2)]).all()
-        mines = np.array([(points[:,i] >= np.min(self._tbls[self.n,:,i])).any() for i in xrange(2)]).all()
+        maxes = np.array([(points[:,i] <= np.max(self.tbl[:,i])).any() for i in xrange(2)]).all()
+        mines = np.array([(points[:,i] >= np.min(self.tbl[:,i])).any() for i in xrange(2)]).all()
         if (mines and maxes):
             return True
         
@@ -475,7 +560,7 @@ class OpacityTable(object):
         
         for point in points:
             for ind,ele in enumerate(point):
-                vmax, vmin = np.max(self._tbls[self.n,:,ind]),np.min(self._tbls[self.n,:,ind])
+                vmax, vmin = np.max(self.tbl[:,ind]),np.min(self.tbl[:,ind])
                 if ele > vmax:
                     raise OpacityTableError(msg="BOUNDS: %s=%g > %g" % (cols[ind],ele,vmax),code=2**(ind+2),val=vmax)
                 elif ele < vmin:
@@ -507,11 +592,9 @@ class OpacityTable(object):
         
         if self._snap:
             points = self.snap(points)
-        elif self._error:
+        if self._error:
             self.__valid__(points)
         kappa = self._interpolator(points)
-        if np.isnan(kappa).any() and self._error:
-            raise ValueError("BOUNDS: Interpolator returned NaN")
         return kappa
         
     def kappa(self,logrho=None,logT=None,rho=None,T=None):
@@ -545,6 +628,7 @@ class OpacityTable(object):
                 self.log.debug("K: %s" % kappa)
         elif knans > 0 and self._warnings["NaNs"] == self._warnings_max:
             self.log.warning("Caught %d NaN Warnings. Future warnings will be suppressed." % self._warnings["NaNs"])
-            
+        if np.isnan(kappa).any() and self._error:
+            raise ValueError("BOUNDS: Interpolator returned NaN")
         return kappa
     
