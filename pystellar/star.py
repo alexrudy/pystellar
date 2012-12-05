@@ -52,7 +52,8 @@ class Star(object):
             self.log.debug("Starting Opacity Table from Scratch")
             self._opacity = ObjectThread(OpacityTable,
                 ikwargs=dict(fkey=self._config["Data.Opacity.Config"],X=self.X,Y=self.Y,
-                    snap=self._config["System.Opacity.Snap"],error=self._config["System.Opacity.Error"]),
+                    snap=self._config["System.Opacity.Snap"],error=self._config["System.Opacity.Error"],
+                    wmax=self._config["System.Opacity.Warnings"],efkey=self._config.get("System.Opacity.ExtendedKey",None)),
                 locking=True,timeout=self._config["System.Opacity.Timeout"])
             self.opacity.start()
             self.log.debug("Started Opacity Table From Scratch")
@@ -227,7 +228,7 @@ class Star(object):
         import scipy.integrate
         ys, data = scipy.integrate.odeint(self.integral,ics,xs,args=(integrator,),
             full_output=True,**self.config["System.Integrator.Scipy"][integrator]["Arguments"])
-        self.log.info("Finished %s Integration: %d timesteps, %d function calls." % (integrator,data["nst"][-1],data["nfe"][-1]))
+        self.log.debug("Finished %s Integration: %d timesteps, %d function calls." % (integrator,data["nst"][-1],data["nfe"][-1]))
         
         derivs = self.fprime(xs=xs,ys=ys,mu=self.mu,optable=self.opacity,X=self.X,XCNO=self.Z,cfg=self.config["Data.Energy"])
         
