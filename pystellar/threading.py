@@ -83,6 +83,7 @@ class ObjectManager(object):
             self._lock = lock
         self.hdr = {}
         self.hdr['pid'] = current_process().pid
+        self.hdr["STATUS"] = self.NORMAL
     
     def __getattr__(self,attr):
         """Call a method on the underlying threaded object"""
@@ -94,6 +95,9 @@ class ObjectManager(object):
             self.input.put((self.hdr,attr,args,kwargs),timeout=self._timeout)
             
         return method
+    
+    ERROR = "ERROR"
+    NORMAL = "NORMAL"
     
     @property
     def duplicator(self):
@@ -115,6 +119,9 @@ class ObjectManager(object):
             raise ThreadStateError(code=2**3,msg="Subthread Ended")
         if self._locking:
             self._lock.release()
+        if hdr["STATUS"] == self.ERROR:
+            self.clear()
+            raise rvalue
         if inputs:
             return func,args,kwargs,rvalue,hdr
         else:
@@ -186,6 +193,8 @@ class ObjectThread(ObjectManager,Process):
                     done = True
                 except Exception as e:
                     done = True
+                    hdr["STATUS"] = self.ERROR
+                    self.output.put((hdr,func,args,kwargs,e))
                     raise #ThreadStateError(msg=str(e),code=2**2,thread=self.pid)
 
 class ObjectPassthrough(ObjectThread):
@@ -200,17 +209,16 @@ class ObjectPassthrough(ObjectThread):
         
     def retrieve(self,inputs=False,timeout=None):
         """Retrieve a return value off the top of the output queue"""
-        timeout = self._timeout if timeout is None else timeout
         self.stop()
         self.run()
-        try:
-            hdr,func,args,kwargs,rvalue = self.output.get(timeout=timeout)
-        except QEmpty, QFull:
-            raise 
-        if inputs:
-            return func,args,kwargs,rvalue
-        else:
-            return rvalue
+        return super(ObjectPassthrough, self).retrieve(inputs, timeout)
+        
+    def release(self,timeout=None):
+        """Release this thread"""
+        self.stop()
+        self.run()
+        return super(ObjectPassthrough, self).release(timeout)
+        
         
     def stop(self):
         """Send the thread stop signal."""
