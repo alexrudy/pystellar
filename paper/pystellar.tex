@@ -176,7 +176,7 @@ basicstyle=\ttfamily\footnotesize
 %--- MAIN TEXT ---- %
 
 \begin{abstract}
-I created a 1-dimensional model of a star. The model uses the standard four equations of stellar structure as a set of 4 ordinary differential equations which are integrated in concert. Convection is treated as fully efficient, no mixing length theory is included. Opacity is found from a calculated opacity table. The energy generation rate is taken to be entirely dominated by p-p and CNO chains. The differential equations are integrating using a ``shooting to a fitting point" method, and demonstrated to be well converged. The boundary values are determined with a simple core and basic photosphere boundary model. The model is implemented as a python module and command line interface.
+I created a 1-dimensional model of a star. The model uses the standard four equations of stellar structure as a set of 4 ordinary differential equations which are integrated in concert. Convection is treated as fully efficient, no mixing length theory is included. Opacity is found from a calculated opacity table. The energy generation rate is taken to be entirely dominated by p-p and CNO chains. The differential equations are integrating using a ``shooting to a fitting point" method, and demonstrated to be well converged. The boundary values are determined with a simple core and basic photosphere boundary model. The model is implemented as a python module and command line interface. The system converges on a stable integration for stars ranging from $0.75 M_\odot$ to $40 M_\odot$.
 \end{abstract}
 
 \tableofcontents
@@ -236,7 +236,7 @@ Energy generation is assumed to be entirely driven by fusion. Two reaction paths
 
 \begin{figure}[htbp]
    \centering
-   \includegraphics[width=0.75\linewidth]{../epsilon.pdf}
+   \includegraphics[width=0.75\linewidth]{solarstar/epsilon.pdf}
    \caption[Energy Generation Rate]{Energy generation rate as a function of temperature used in the stellar model. The contributions from the p-p chain and the CNO chain are shown.}
    \label{fig:energy}
 \end{figure}
@@ -354,20 +354,20 @@ Each integrator, as well as the opacity table, operates in an independent thread
 
 %:Results
 \section{Results} \label{sec:results}
-The Newton-Rapson method converged in 22 iterations, and the convergence showed a power-law like behavior which suggests stability. Towards the end of the minimization, some stability was lost in the pressure function, likely due to the very well converged pressure variable, which neared the numerical precision limit of the model.
+The Newton-Rapson method converged in 31 iterations, and the convergence showed a power-law like behavior which suggests stability. Towards the end of the minimization, some stability was lost in the pressure function, likely due to the very well converged pressure variable, which neared the numerical precision limit of the model.
 
 The results are shown in a series of tables and figures. \Cref{fig:firstint} shows the result of an initial integration performed with the starting boundary value guesses from \cref{sec:parameters}. \Cref{fig:finalint} shows the integration after the Newton-Rapson method converges. The boundary values at the start and final positions are provided in \cref{tab:guess}. \Cref{fig:finalintextra} shows other interesting physical parameters for the star once the Newton Rapson method has converged.
 
  \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.75\linewidth]{../single-integration.pdf}
+    \includegraphics[width=0.75\linewidth]{solarstar/single-integration.pdf}
     \caption[Initial Integration]{The stellar structure of the initial boundary condition $\starmass$ star, which show large gaps across the integration fitting point.}
     \label{fig:firstint}
  \end{figure}
  
  \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.75\linewidth]{../final-integration.pdf}
+    \includegraphics[width=0.75\linewidth]{solarstar/final-integration.pdf}
     \caption[Converged Integration]{The stellar structure of the converged $\starmass$ star, which show a smooth transition across the integration fitting point.}
     \label{fig:finalint}
  \end{figure}
@@ -375,7 +375,7 @@ The results are shown in a series of tables and figures. \Cref{fig:firstint} sho
 
  \begin{figure}[htbp]
     \centering
-    \includegraphics[width=0.75\linewidth]{../final-integration-extra.pdf}
+    \includegraphics[width=0.75\linewidth]{solarstar/final-integration-extra.pdf}
     \caption[Properties of the Converged Integration]{Internal physical values calculated across the stellar structure. The plots show Density $\rho$, Temperature Gradiant $\nabla$, Energy generation $\epsilon = \frac{dl}{dm}$ and opacity $\kappa$ for the converged integration shown in Figure \ref{fig:finalint} and summarized in Table \ref{tab:guess}. }
     \label{fig:finalintextra}
  \end{figure}
@@ -400,20 +400,20 @@ The gaps at the fitting points are shown in \cref{fig:conv}, along with the conv
  
  \begin{figure}[htbp]
     \centering
-    \includegraphics[width=\linewidth]{../fitting-points.pdf}
-    \caption[Gaps at Fitting Points]{Difference at fitting points (and the respective convergence parameter) for each variable in the stellar integration code. The gap in fitting points decreases with a power-law structure. The system was determined to have converged when all four convergence parameters were below $\tolparam$. These values can be seen in Table \ref{tab:conv}.}
+    \includegraphics[width=\linewidth]{solarstar/fitting-points.pdf}
+    \caption[Gaps at Fitting Points]{Difference at fitting points (and the respective convergence parameter) for each variable in the stellar integration code. The gap in fitting points decreases with a power law structure. The system was determined to have converged when all four convergence parameters were below $\tolparam$. These values can be seen in Table \ref{tab:conv}.}
     \label{fig:conv}
  \end{figure}
  
   \begin{figure}[htbp]
     \centering
-    \includegraphics[width=\linewidth]{../guess-movement.pdf}
+    \includegraphics[width=\linewidth]{solarstar/guess-movement.pdf}
     \caption[Boundary Point Movement]{The change in boundary conditions at each step of the Newton Rapson method during the convergence search.}
     \label{fig:boundarydelta}
  \end{figure}
  \begin{figure}[htbp]
     \centering
-    \includegraphics[width=\linewidth]{../initial-conditions.pdf}
+    \includegraphics[width=\linewidth]{solarstar/initial-conditions.pdf}
     \caption[Boundary Points]{The boundary conditions used at each step of the Newton Rapson method during the convergence search. These plots are summarized in Table \ref{tab:guess}.}
     \label{fig:boundary}
  \end{figure}    
@@ -439,10 +439,132 @@ This stellar 1-D model works well, and reproduces values similar to those found 
 \bibliographystyle{apalike}
 \bibliography{pystellar}
 
-%\appendix
+\clearpage
+\appendix
 
-%\section{Configuration File}
+\section{Convergence for a Massive ($40 M_\odot$) Star}
+The code converges not only for a $\starmass$ star, but also for a $40 M_\odot$ star. The initial integration (with initial conditions taken from \citet{hansen2004stellar}) is shown in \cref{fig:big:firstint}. The final integration is shown in \cref{fig:big:finalint} (with extra parameters in \cref{fig:big:finalintextra}). The properties of the massive star are tabulated in \cref{tab:big:guess}. The convergence gaps at fitting points are shown in \cref{tab:big:conv} and \cref{fig:big:conv}. 
 
-%\lstinputlisting[caption={Star.yml}]{../pystellar/Star.yml}
+ \begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.75\linewidth]{bigstar/single-integration.pdf}
+    \caption[Initial Integration]{The stellar structure of the initial boundary condition $40 M_\odot$ star, which show large gaps across the integration fitting point.}
+    \label{fig:big:firstint}
+ \end{figure}
+ 
+ \begin{table}[htbp]
+\begin{center}
+\topcaption[$40 M_\odot$ Star: Boundary Parameters]{Boundary parameters used for the $40 M_\odot$ star initially, and final values of those parameters after convergence.}
+\label{tab:big:guess}
+\input{bigstar/guesses}
+\end{center}
+\end{table}
+ 
+ \begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.75\linewidth]{bigstar/final-integration.pdf}
+    \caption[$40 M_\odot$ Star: Converged Integration]{The stellar structure of the converged $40 M_\odot$ star, which show a smooth transition across the integration fitting point.}
+    \label{fig:big:finalint}
+ \end{figure}
+ 
+
+ \begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.75\linewidth]{bigstar/final-integration-extra.pdf}
+    \caption[$40 M_\odot$ Star: Properties of the Converged Integration]{Internal physical values calculated across the stellar structure. The plots show Density $\rho$, Temperature Gradiant $\nabla$, Energy generation $\epsilon = \frac{dl}{dm}$ and opacity $\kappa$ for the converged integration shown in Figure \ref{fig:big:finalint} and summarized in Table \ref{tab:guess}. }
+    \label{fig:big:finalintextra}
+ \end{figure}
+
+
+\begin{table}[htbp]
+\begin{center}
+\topcaption[$40 M_\odot$ Star: Gaps at Fitting Points]{Difference in variables at the fitting point ($m = 20 M_\odot $) initially, and at the end of the converged program. The convergence parameter $c$ is shown at the end of the program. The algorithm was determined to have converged when all convergence parameters were less than $\tolparam$.}
+\label{tab:big:conv}
+\input{bigstar/fittingpoint}
+ \end{center}
+ \end{table}
+ 
+ \begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\linewidth]{bigstar/fitting-points.pdf}
+    \caption[$40 M_\odot$ Star: Gaps at Fitting Points]{Difference at fitting points for the $40 M_\odot$ Star (and the respective convergence parameter) for each variable in the stellar integration code. The system was determined to have converged when all four convergence parameters were below $\tolparam$. These values can be seen in Table \ref{tab:big:conv}.}
+    \label{fig:big:conv}
+ \end{figure}
+ 
+  \begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\linewidth]{bigstar/guess-movement.pdf}
+    \caption[$40 M_\odot$ Star: Boundary Point Movement]{$40 M_\odot$ Star: The change in boundary conditions at each step of the Newton Rapson method during the convergence search.}
+    \label{fig:big:boundarydelta}
+ \end{figure}
+ \begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\linewidth]{bigstar/initial-conditions.pdf}
+    \caption[$40 M_\odot$ Star: Boundary Points]{$40 M_\odot$ Star: The boundary conditions used at each step of the Newton Rapson method during the convergence search. These plots are summarized in Table \ref{tab:guess}.}
+    \label{fig:big:boundary}
+ \end{figure}    
+
+\clearpage
+\section{Convergence for a Small ($0.75 M_\odot$) Star}
+The code converges not only for a $\starmass$ star, but also for a $0.75 M_\odot$ star. The initial integration (with initial conditions taken from \citet{hansen2004stellar}) is shown in \cref{fig:small:firstint}. The final integration is shown in \cref{fig:small:finalint} (with extra parameters in \cref{fig:small:finalintextra}). The properties of the massive star are tabulated in \cref{tab:small:guess}. The convergence gaps at fitting points are shown in \cref{tab:small:conv} and \cref{fig:small:conv}. 
+
+ \begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.75\linewidth]{smallstar/single-integration.pdf}
+    \caption[$0.75 M_\odot$ Star: Initial Integration]{The stellar structure of the initial boundary condition $0.75 M_\odot$ star, which show large gaps across the integration fitting point.}
+    \label{fig:small:firstint}
+ \end{figure}
+ 
+ \begin{table}[htbp]
+\begin{center}
+\topcaption[$0.75 M_\odot$ Star: Boundary Parameters]{Boundary parameters used for the $0.75 M_\odot$ star initially, and final values of those parameters after convergence.}
+\label{tab:small:guess}
+\input{smallstar/guesses}
+\end{center}
+\end{table}
+ 
+ \begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.75\linewidth]{smallstar/final-integration.pdf}
+    \caption[$0.75 M_\odot$ Star: Converged Integration]{The stellar structure of the converged $0.75 M_\odot$ star, which show a smooth transition across the integration fitting point.}
+    \label{fig:small:finalint}
+ \end{figure}
+ 
+
+ \begin{figure}[htbp]
+    \centering
+    \includegraphics[width=0.75\linewidth]{smallstar/final-integration-extra.pdf}
+    \caption[$0.75 M_\odot$ Star: Properties of the Converged Integration]{$0.75 M_\odot$ Star: Internal physical values calculated across the stellar structure. The plots show Density $\rho$, Temperature Gradiant $\nabla$, Energy generation $\epsilon = \frac{dl}{dm}$ and opacity $\kappa$ for the converged integration shown in Figure \ref{fig:small:finalint} and summarized in Table \ref{tab:small:guess}. }
+    \label{fig:small:finalintextra}
+ \end{figure}
+
+
+\begin{table}[htbp]
+\begin{center}
+\topcaption[$0.75 M_\odot$ Star: Gaps at Fitting Points]{$0.75 M_\odot$ Star: Difference in variables at the fitting point ($m = 0.375 M_\odot $) initially, and at the end of the converged program. The convergence parameter $c$ is shown at the end of the program. The algorithm was determined to have converged when all convergence parameters were less than $\tolparam$.}
+\label{tab:small:conv}
+\input{smallstar/fittingpoint}
+ \end{center}
+ \end{table}
+ 
+ \begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\linewidth]{smallstar/fitting-points.pdf}
+    \caption[$0.75 M_\odot$ Star: Gaps at Fitting Points]{Difference at fitting points for the $0.75 M_\odot$ Star (and the respective convergence parameter) for each variable in the stellar integration code. The system was determined to have converged when all four convergence parameters were below $\tolparam$. These values can be seen in Table \ref{tab:small:conv}.}
+    \label{fig:small:conv}
+ \end{figure}
+ 
+  \begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\linewidth]{smallstar/guess-movement.pdf}
+    \caption[$0.75 M_\odot$ Star: Boundary Point Movement]{$0.75 M_\odot$ Star: The change in boundary conditions at each step of the Newton Rapson method during the convergence search.}
+    \label{fig:small:boundarydelta}
+ \end{figure}
+ \begin{figure}[htbp]
+    \centering
+    \includegraphics[width=\linewidth]{smallstar/initial-conditions.pdf}
+    \caption[$0.75 M_\odot$ Star: Boundary Points]{$0.75 M_\odot$ Star: The boundary conditions used at each step of the Newton Rapson method during the convergence search. These plots are summarized in Table \ref{tab:guess}.}
+    \label{fig:small:boundary}
+ \end{figure}
 
 \end{document}
