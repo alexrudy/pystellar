@@ -23,6 +23,7 @@ class NRSolver(object):
         self._config = config
         self.log = logging.getLogger(__name__)
         
+    names = ["radius","luminosity","pressure","temperature"]
     
     @property
     def dashboard(self):
@@ -146,31 +147,32 @@ class NRSolver(object):
             self.append_dashboard(np.array([n]),f0,line="fitting",marker='o',method='semilogy')
             self.append_dashboard(np.array([n]),y0,figure="guesses",line="guesses",marker='o')
             
+            # Matrix Math
+            f0m = np.matrix(f0).T
+            dy = -1*(jac.I * f0m).getA().T[0]
+            gy = (jac * f0m).getA().T[0]
+            dy *= float(self.config["System.NewtonRapson.stepeps"])
+            
+            self.append_dashboard(np.array([n]),dy,figure="adjustments",line="fitting-jac",marker="o")
+            self.log.debug("Full Step Size (dr,dl,dP,dT)=[%.4g, %.4g, %.4g, %.4g]" % tuple(dy))
+            
+            # Linear Search
+            y0, f0, dy = self.linear_search(y0,f0,dy,ff,gy)
+            np.save(self.config["System.NewtonRapson.file"],y0)
+            
+            ds[n] = dy
             # Convergence Test
-            c0 = np.abs(f0/y0)
+            c0 = np.abs(f0/ys[0])
 
             cs[n] = c0
             self.log.info("[%04d] Convergence Value: %.2g > %.2g" % (n,np.max(c0),tol))
             for i in range(ny):
                 self.dashboard.append_data(np.array([n]),np.array([c0[i]]),figure='fitting',axes='ffpoint',
-                    line='ffpoint-%d' % i,method='semilogy',marker='o')
-
-            
-            # Matrix Math
-            f0m = np.matrix(f0).T
-            dy = -1*(jac.I * f0m).getA().T[0]
-            dy *= float(self.config["System.NewtonRapson.stepeps"])
-            
-            ds[n] = dy
+                    line='ffpoint-%d' % i,method='semilogy',marker='o',label=self.names[i])
+                    
             if np.max(c0) < tol:
                 converged = True
                 break
-            self.append_dashboard(np.array([n]),dy,figure="adjustments",line="fitting-jac",marker="o")
-            self.log.info("Full Step Size (dr,dl,dP,dT)=[%.4g, %.4g, %.4g, %.4g]" % tuple(dy))
-            
-            # Linear Search
-            y0, f0 = self.linear_search(y0,f0,dy,ff)
-            np.save(self.config["System.NewtonRapson.file"],y0)
             # Predictive update for next step
             self.append_dashboard(np.array([n]),f0,line="fitting-linear-search",marker='x',ms=6.0,method='semilogy')
             self.dashboard.update("fitting","adjustments","guesses")
@@ -200,18 +202,18 @@ class NRSolver(object):
         self.dashboard.save("integrationextras","final-integration-extra.pdf")
         
     
-    def linear_search(self,x0,f0,dx,ff0):
+    def linear_search(self,x0,f0,dx,ff0,gx):
         """Linear Search Method"""
-        step_max = self.config["System.NewtonRapson.linearSearch.stepmax"] * max([np.sqrt(np.sum(np.power(x0,2))),x0.size])
+        step_max = self.config["System.NewtonRapson.linearSearch.stepmax"] * np.max([np.sqrt(np.sum(np.power(x0,2))),x0.size])
         alpha = self.config["System.NewtonRapson.linearSearch.alpha"]
         step = np.sqrt(np.sum(dx**2))
         if step > step_max:
             self.log.debug("Reducing Step Size: %s" % dx)
             dx *= step_max/step
             self.log.warning("Reduced Step Size: %s" % dx)
-        slope = np.sum(dx)
-        if slope < 0:
-            self.log.error("Roundoff Error in Search: dx=%s, slope=%.2g" % (dx,slope))
+        slope = np.sum(dx*gx)
+        if slope <= 0:
+            self.log.error("Roundoff Error in Search: dx=%s, gx=%s, slope=%.2g" % (dx,gx,slope))
         test = np.max(np.abs(dx)/np.max(np.hstack((np.abs(x0),np.ones(x0.shape))),axis=0))
         alam_min = self.config["System.NewtonRapson.linearSearch.tolX"]/test
         alaminit = 1.0
@@ -238,12 +240,12 @@ class NRSolver(object):
                 self.log.warning("Non-finite integration failure in linear search: alam = %f" % alam1)
                 self.log.debug("Moving due to integration failure: %g -> %g" % (alam1,alam0))
             elif not converged and ff1 < ff0 + alpha * alam1 * slope:
-                self.log.debug("Converged because ff %g < %g ff+alpha+lambda+slope (%g, %g, %g, %g)" % (ff1,ff0 + alpha * alam1 * slope,ff0,alpha,alam1,slope))
+                self.log.debug("Converged because ff %g < %g ff+alpha*lambda*slope (%g, %g, %g, %g)" % (ff1,ff0 + alpha * alam1 * slope,ff0,alpha,alam1,slope))
                 xr = x1
                 converged = True
             else:
                 if alam1 == alaminit:
-                    alam0 = - slope / (2.0 * (ff1 - ff0 * slope))
+                    alam0 = - slope / (2.0 * (ff1 - ff0 - slope))
                     self.log.debug("Moving lambda on first step: %g -> %g" % (alam1,alam0))
                 else:
                     rhs1 = ff1 - ff0 - alam1 * slope
@@ -272,10 +274,10 @@ class NRSolver(object):
                     ff2 = ff1
                 alam2 = alam1
                 alam1 = 0.1 * alam1 if 0.1 * alam1 > alam0 else alam0
-        self.log.info("Linear Search Converged after %d steps on %s" % (convergence_steps,xr))
-        self.log.info("Final Step Size: %s" % (xr-x0))
+        self.log.debug("Linear Search Converged after %d steps on %s" % (convergence_steps,xr))
+        self.log.debug("Final Step Size: %s" % (xr-x0))
         self.log.debug("Final Lambda Size: %g" % alam1)
-        return xr,f1
+        return xr,f1,xr-x0
     
     def latexoutput(self):
         """Convert the last saved output to a handy LaTeX table"""
