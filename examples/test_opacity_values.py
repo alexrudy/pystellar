@@ -17,16 +17,24 @@ from pystellar.threading import ObjectsManager, EngineManager
 
 import numpy as np
 import time
+import logging
 
 X = 0.70
-Y = 0.27
+Y = 0.28
 
-OT = ObjectsManager(OpacityTable,nprocs=1,ikwargs=dict(fkey='OP17',X=0.70,Y=0.28))
-OT.start()
-P = 9.987196320531581296e+04 
-T = 5.564985618848681042e+03
+log = logging.getLogger('pystellar.opacity')
+log.setLevel(logging.DEBUG)
+console = logging.StreamHandler()
+console.setLevel(logging.DEBUG)
+log.addHandler(console)
+
+OP = OpacityTable(fkey='OP17',X=0.70,Y=0.28,efkey='cunha06')
+P, T = [8.726086186677213013e+07, 4.576702504411734481e+03]
 
 rho = density(P=P,T=T,X=X,Y=Y)
 
-OT.kappa(rho=rho,T=T)
-print OT.retrieve()
+print OP.kappa(rho=rho,T=T)
+print OP.make_points(logT=np.log10(T),logrho=np.log10(rho))
+T= 11264.2381423
+rho=0.0044603404639
+print OP.kappa(T=T,rho=rho)
