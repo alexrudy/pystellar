@@ -4,42 +4,11 @@ Star:
     Rs: 1.0
     Ls: 1.0
     Convective: false
-  Integration:
-    fp: 0.5
 System:
   Dashboard:
     Update: 0
   NewtonRapson:
-    # niters: 10
-    stepeps: 1
+    stepeps: 0.5
     tol: 1.0e-6
-  Integrator:
-    PyStellar:
-      LogSurface:
-        Arguments:
-          mxstep: 100000
-          h0: !!float -1.0e-8
-          tol: !!float 1.0e-9
-      LogCenter:
-        Arguments:
-          mxstep: 100000
-          h0: !!float 0.5
-          tol: !!float 1.0e4
-    Scipy:
-      LogSurface:
-        Arguments:
-          mxstep: 100000
-          h0: !!float -1.0e-10
-          hmin: !!float 4e-15
-          hmax: !!float 0.5
-          rtol: !!float 1.0e-9
-          # atol: !!float 0.0
-      LogCenter:
-        Arguments:
-          mxstep: 100000
-          h0: !!float 1.0e-8
-          hmin: !!float 1.0e-15
-          hmax: !!float 1.0e-1
-          rtol: !!float 1.0e-9
-          atol: !!float 1.0e-20
-      
+  Opacity:
+    ExtendedKey: cunha06

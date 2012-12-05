@@ -49,10 +49,10 @@ System:
     Thread: false
     Snap: true
     Error: false
-    Timeout: 130
-    Warnings: 100
+    Timeout: 30000
+    Warnings: 1
   Threading:
-    Timeout: 3000
+    Timeout: 30000
   Outputs:
     Size: 500
     Update: 0
@@ -69,7 +69,7 @@ System:
       Compare: paper/compare.tex
   Dashboard:
     Update: 0
-    Timeout: 300
+    Timeout: 30000
   Numpy:
     PrintOptions:
       precision: 4
@@ -78,13 +78,13 @@ System:
     text:
       usetex: false
   NewtonRapson:
-    Timeout: 3000
+    Timeout: 30000
     file: BestGuess.npy
     niters: 1000
     tol: 1.0e-6
     stepmax: 1
     stepeps: 1
-    maxfiterr: 10
+    maxfiterr: 100
     Jac:
       dx: 1.0e-6
       maxdepth: 3
@@ -110,7 +110,7 @@ System:
           mxstep: 100000
           h0: !!float -1.0e-10
           hmin: !!float 4e-15
-          hmax: !!float 1.0e-4
+          hmax: !!float 0.5
           rtol: !!float 1.0e-9
           atol: !!float 1.0e-9
           mxordn: 5
@@ -120,8 +120,8 @@ System:
           mxstep: 100000
           h0: !!float 1.0e-8
           hmin: !!float 1.0e-15
-          hmax: !!float 1.0e-2
-          rtol: !!float 1.0e-12
+          hmax: !!float 1.0e-1
+          rtol: !!float 1.0e-9
           atol: !!float 1.0e-20
       Center:
         Arguments:
