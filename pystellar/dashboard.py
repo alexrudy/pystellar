@@ -76,6 +76,8 @@ class Dashboard(object):
             self.lines[figure][axes][line] = lineart
             n += 1
             line += "%2d" % n
+        if 'label' in kwargs:
+            self.config["Dashboard.Figures"][figure]["axes"][axes]["legend"] = True
         return self.lines[figure][axes].keys()
         
     def update_data(self,x,y,figure,axes,line,**kwargs):
@@ -107,8 +109,10 @@ class Dashboard(object):
         """Update the drawing"""
         if len(figures) == 0:
             figures = tuple(self.figures.keys())
-        for figure in figures:
-            for ax in self.axes[figure].values():
+        for figure in figures:                
+            for key,ax in self.axes[figure].iteritems():
+                if self.config["Dashboard.Figures"][figure]["axes"][key].get("legend",False):
+                    ax.legend(loc=3,fontsize='small')
                 ax.relim()
                 ax.autoscale_view()
             if figure in self.active_figures:
