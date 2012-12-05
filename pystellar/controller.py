@@ -13,7 +13,7 @@ from .dashboard import Dashboard
 from .newton import NRSolver
 
 import logging, logging.config, logging.handlers
-import time
+import time, datetime
 
 import numpy as np
 
@@ -89,7 +89,7 @@ class StarEngine(CLIEngine):
         
     def start(self):
         """Start the engine!"""            
-        self._start_time = time.clock()
+        self._start_time = datetime.datetime.now()
         self._threads["master"] = Star(config=self.config.store)
         self.stars["master"] = [self.threads["master"]]
         self._threads["opacity"] = self._threads["master"].opacity
@@ -166,8 +166,8 @@ class StarEngine(CLIEngine):
     def end(self):
         """Things to do at the end of every run!"""
 
-        total_time = time.clock()-self._start_time
-        self.log.info("Total time taken: %fs" % total_time)
+        total_time = datetime.datetime.now()-self._start_time
+        self.log.info("Total time taken: %s" % total_time)
         if self.opts.latex:
             self.threads["newton"].latexoutput()
             self.threads["newton"].release()
